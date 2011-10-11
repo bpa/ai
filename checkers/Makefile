@@ -1,7 +1,7 @@
-.SUFFIXES:
-.SUFFIXES: .c .cc .o
-OBJS := $(patsubst %.c,%.o,$(wildcard [^t][^_]*.c))
-TEST := $(patsubst %.cc,%.o,$(wildcard *.cc)) gtest-all.o gtest_main.o
+FILES := $(wildcard *.cc)
+OBJS := $(patsubst %.cc,%.o,$(filter-out t_%, $(FILES)))
+TEST := $(patsubst %.cc,%.o,$(filter t_%, $(FILES)))
+GTEST_OBJS := gtest-all.o gtest_main.o 
 
 GTEST = $(HOME)/build/gtest
 TFLAGS = -I$(GTEST)/include
@@ -16,20 +16,20 @@ bruce: $(OBJS)
 test: gtest
 	./gtest
 
-gtest: $(TEST)
-	$(CXX) -o gtest $(TEST) -lpthread
+gtest: $(TEST) $(GTEST_OBJS) $(OBJS)
+	$(CXX) -o gtest $(TEST) $(GTEST_OBJS) $(OBJS) -lpthread
+
+$(OBJS): %.o: %.cc
+	$(CC) $(CFLAGS) $(INC) -c $<
+
+$(TEST): %.o: %.cc
+	$(CXX) $(CFLAGS) $(INC) -c $< $(TFLAGS)
 
 gtest-all.o: $(GTEST)/src/gtest-all.cc
 	$(CXX) $(CFLAGS) $(TFLAGS) -I$(GTEST) $(INC) -c $<
 
 gtest_main.o: $(GTEST)/src/gtest_main.cc
 	$(CXX) $(CFLAGS) $(TFLAGS) -I$(GTEST) $(INC) -c $<
-
-.c.o:
-	$(CC) $(CFLAGS) $(INC) -c $<
-
-.cc.o:
-	$(CXX) $(CFLAGS) $(INC) -c $< $(TFLAGS)
 
 .PHONY: clean
 clean:
