@@ -1,4 +1,4 @@
-FILES := $(wildcard *.cc)
+FILES := $(filter-out main.cc,$(wildcard *.cc))
 OBJS := $(patsubst %.cc,%.o,$(filter-out t_%, $(FILES)))
 TEST := $(patsubst %.cc,%.o,$(filter t_%, $(FILES)))
 GTEST_OBJS := gtest-all.o gtest_main.o 
@@ -9,8 +9,8 @@ CFLAGS = -Wall -Wextra
 
 all: bruce test
 
-bruce: $(OBJS)
-	$(CC) -o bruce $(OBJS)
+bruce: $(OBJS) main.o
+	$(CXX) -o bruce $(OBJS) main.o
 
 .PHONY: test
 test: gtest
@@ -20,7 +20,7 @@ gtest: $(TEST) $(GTEST_OBJS) $(OBJS)
 	$(CXX) -o gtest $(TEST) $(GTEST_OBJS) $(OBJS) -lpthread
 
 $(OBJS): %.o: %.cc
-	$(CC) $(CFLAGS) $(INC) -c $<
+	$(CXX) $(CFLAGS) $(INC) -c $<
 
 $(TEST): %.o: %.cc
 	$(CXX) $(CFLAGS) $(INC) -c $< $(TFLAGS)

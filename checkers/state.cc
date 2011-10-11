@@ -4,7 +4,7 @@
 #include "state.h"
 
 State *state_init(const Board *board) {
-	State *state = malloc(sizeof(State));
+	State *state = (State*)malloc(sizeof(State));
 	bzero(state, sizeof(State));
 	if (board == NULL)
 		board_setup(&state->board);

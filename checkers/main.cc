@@ -9,7 +9,8 @@
  
 int main(int argc, char *argv[]) {
 	float time_limit;
-	int me, max_depth, len;
+	int max_depth, len;
+	Player me;
     char buf[1028];
 	State *state;
 	Move *move;
@@ -23,18 +24,18 @@ int main(int argc, char *argv[]) {
     len = read(STDIN_FILENO, buf, 1028);
     if(!strncmp(buf,"Player1", strlen("Player1"))) {
         fprintf(stderr, "I'm Player 1\n");
-        me = 1; 
+        me = RED; 
     }
     else {
         fprintf(stderr, "I'm Player 2\n");
-        me = 2;
+        me = BLACK;
     }
 
     /* Set up the board */ 
     state = state_init(NULL);
     srand((unsigned int)time(0));
 
-    if (me == 1) goto determine_next_move;
+    if (me == RED) goto determine_next_move;
 
     for(;;) {
         len = read(STDIN_FILENO, buf, 1028);
