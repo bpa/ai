@@ -1,10 +1,16 @@
 #ifndef BOARD_H
 #define BOARD_H
+#include <sys/types.h>
 
-typedef char Board[8][8];
+class Board {
+public:
+	char tiles[8][8];
+	u_int64_t hash;
 
-void board_setup(Board *);
-long int board_hash(Board *);
-int board_evaluate(Board *);
+	Board();
+	Board(Board *board);
+	void say();
+	void generate_hash();
+};
 
 #endif

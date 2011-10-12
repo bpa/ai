@@ -1,31 +1,67 @@
+#include <iostream>
 #include "board.h"
 
-#define Empty 0x00
-#define Piece 0x20
-#define Red 0x00
-#define Black 0x80
-void board_setup(Board *board) {
-	int x,y;
-	char pos;
+using namespace std;
 
-	pos = 0;
-	for(y=0; y<8; y++) {
-		for(x=0; x<8; x++) {
-			if(x%2 != y%2) {
-				*board[y][x] = pos;
-				if(y<3 || y>4) *board[y][x] |= Piece; else *board[y][x] |= Empty;
-				if(y<3) *board[y][x] |= Red; 
-				if(y>4) *board[y][x] |= Black;
-				pos++;
-			} else *board[y][x] = 0;
+#define NONE     0x00
+#define OCCUPIED 0x01
+#define KING     0x02
+#define BLACK    0x04
+
+void Board::generate_hash() {
+	bool even = false;
+	char val;
+	char *pos = (char*)&hash;
+	for (int y=0; y<8; y++) {
+		for (int x=0; x<8; x++) {
+			if(x % 2 != y % 2) {
+				char tile = tiles[y][x];
+				if (even) {
+					val |= tile;
+					*pos = val;
+					pos++;
+				}
+				else {
+					val = tile << 4;
+				}
+				even = !even;
+			}
 		}
 	}
 }
 
-long int board_hash(Board *board) {
-	return 0;
+Board::Board() {
+	int x,y;
+
+	for(y=0; y<8; y++) {
+		for(x=0; x<8; x++) {
+			tiles[y][x] = 0;
+			if(x % 2 != y % 2) {
+				if (y<3 || y>4) tiles[y][x] = OCCUPIED;
+				if (y>4)        tiles[y][x] |= BLACK;
+			}
+		}
+	}
+
+	generate_hash();
 }
 
-int board_evaluate(Board *board) {
-	return 1;
+void Board::say() {
+	for (int y=0; y<8; y++) {
+		for (int x=0; x<8; x++) {
+			if(x % 2 == y % 2)
+				cout << '.';
+			else {
+				char t = tiles[y][x];
+				if ( t == NONE )
+					cout << ' ';
+				else if ( t & BLACK ) 
+					cout << (t & KING ? 'B' : 'b');
+				else
+					cout << (t & KING ? 'R' : 'r');
+			}
+		}
+		cout << endl;
+	}
+	cout << hex << hash << endl;
 }

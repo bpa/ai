@@ -63,11 +63,11 @@ void move_list_add_king_moves(MoveList *moves, Board *board, int x, int y) {
         y1 = y+j; x1 = x+i;
         /* Make sure we're not off the edge of the board */
         if(y1<0 || y1>7 || x1<0 || x1>7) continue; 
-        if(empty(*board[y1][x1])) {  /* The square is empty, so we can move there */
-            move[0] = number(*board[y][x])+1;
-            move[1] = number(*board[y1][x1])+1;    
-            move_list_add(moves, &move);
-        }
+//        if(empty(*board[y1][x1])) {  /* The square is empty, so we can move there */
+//            move[0] = number(*board[y][x])+1;
+//            move[1] = number(*board[y1][x1])+1;    
+//            move_list_add(moves, &move);
+//        }
     }
 }
 
@@ -86,24 +86,21 @@ void move_list_add_moves(MoveList *moves, Board *board, Player player, int x, in
         y1 = y+j; x1 = x+i;
         /* Make sure we're not off the edge of the board */
         if(y1<0 || y1>7 || x1<0 || x1>7) continue; 
-        if(empty(*board[y1][x1])) {  /* The square is empty, so we can move there */
-            move[0] = number(*board[y][x])+1;
-            move[1] = number(*board[y1][x1])+1;    
-            move_list_add(moves, &move);
-        }
+//        if(empty(*board[y1][x1])) {  /* The square is empty, so we can move there */
+//            move[0] = number(*board[y][x])+1;
+//            move[1] = number(*board[y1][x1])+1;    
+//            move_list_add(moves, &move);
+//        }
     }
 }
 
 /* Determines all of the legal moves possible for a given state */
 void FindLegalMoves(MoveList *moves, Board *b, Player player) {
-    //int x,y;
-    //char move[12], board[8][8];
-
-    //memset(move,0,sizeof(Move));
-	if ((player == RED || player == BLACK) && moves->length > 40) {
-		*b[0][0] = King;
-	}
 /*
+    int x,y;
+    char move[12], board[8][8];
+
+    memset(move,0,sizeof(Move));
 
     for(y=0; y<8; y++)
     for(x=0; x<8; x++)
