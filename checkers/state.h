@@ -1,17 +1,26 @@
 #ifndef STATE_H
 #define STATE_H
+#include <vector>
+class State;
 #include "board.h"
 #include "move.h"
+#include "player.h"
 
-typedef struct st_state {
+using namespace std;
+
+class State {
+public:
     Board board;
 	long int hash;
-    MoveList *moves[2];
 	int value;
-} State;
 
-State *state_init(const Board *board);
-State *state_transition(State *, Move *);
-MoveList *state_moves(State *, Player);
+	State();
+	State(const Board *board);
+	State(State *, Move *);
+	vector<Move> *moves_for_player(Player);
+
+private:
+    vector<Move> moves[2];
+};
 
 #endif

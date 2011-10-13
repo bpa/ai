@@ -1,18 +1,19 @@
 #ifndef MOVE_H
 #define MOVE_H
-#include "board.h"
-#include "player.h"
+#include <string>
+class Move;
+#include "state.h"
 
-typedef char Move[13];
+using namespace std;
 
-typedef struct st_move_list {
-	int length;
-	Move moves[48];
-} MoveList;
-
-MoveList *move_list_create(Board *, Player);
-
-Move *move_from_string(const char *);
-void move_to_string(Move *, char *);
+class Move {
+public:
+	char tiles[13];
+	int moves;
+	Move();
+	Move(const char *);
+	void addTile(char);
+	void to_string(char *);
+};
 
 #endif

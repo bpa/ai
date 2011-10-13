@@ -1,7 +1,7 @@
 FILES := $(filter-out main.cc,$(wildcard *.cc))
 OBJS := $(patsubst %.cc,%.o,$(filter-out t_%, $(FILES)))
 TEST := $(patsubst %.cc,%.o,$(filter t_%, $(FILES)))
-GTEST_OBJS := gtest-all.o gtest_main.o 
+GTEST_OBJS := gtest-all.o gtest_main.o
 
 GTEST = $(HOME)/build/gtest
 TFLAGS = -I$(GTEST)/include

@@ -18,14 +18,12 @@ TEST(board, init) {
 	ASSERT_EQ(0x00, b.tiles[6][0]);
 	ASSERT_EQ(0x05, b.tiles[7][0]);
 
-	b.say();
-
 	stringstream ss;
 	unsigned char *pos = (unsigned char*)&b.hash;
 	for (int i=0; i<8; i++) {
 		char p = *pos++;
 		ss << hex << (int)p;
 	}
-	ASSERT_STREQ("11111111111100000000555555555555", ss.str().c_str());
+	ASSERT_STREQ("11111111111100", ss.str().c_str());
 }
 

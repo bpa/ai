@@ -63,5 +63,4 @@ void Board::say() {
 		}
 		cout << endl;
 	}
-	cout << hex << hash << endl;
 }

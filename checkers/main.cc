@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
 	int max_depth, len;
 	Player me;
     char buf[1028];
-	State *state;
+	State *state, *new_state;
 	Move *move;
 
     /* Convert command line parameters */
@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
     }
 
     /* Set up the board */ 
-    state = state_init(NULL);
+    state = new State();
     srand((unsigned int)time(0));
 
     if (me == RED) goto determine_next_move;
@@ -41,16 +41,22 @@ int main(int argc, char *argv[]) {
         len = read(STDIN_FILENO, buf, 1028);
         buf[len]='\0';
 
-        move = move_from_string(buf);
-        state = state_transition(state, move);
+        move = new Move(buf);
+        new_state = new State(state, move);
+		delete(state);
+		state = new_state;
+		delete(move);
         
 determine_next_move:
         move = choice_random(state, me);
         if (move != NULL) {
-        	state = state_transition(state, move);
-            move_to_string(move, buf);
+        	new_state = new State(state, move);
+			delete(state);
+			state = new_state;
+            move->to_string(buf);
 			write(STDOUT_FILENO, buf, strlen(buf));
 			fflush(stdout);
+			delete(move);
         }
         else exit(1); /* No legal moves available, so I have lost */
 

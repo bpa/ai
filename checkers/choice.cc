@@ -3,7 +3,7 @@
 
 Move *choice_random(State *state, Player p) {
 	int i;
-	MoveList *moves = state_moves(state, p);
-	i = rand() % moves->length;
-	return &moves->moves[i];
+	vector<Move> *moves = state->moves_for_player(p);
+	i = rand() % moves->size();
+	return &moves->at(i);
 }
