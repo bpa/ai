@@ -33,5 +33,5 @@ gtest_main.o: $(GTEST)/src/gtest_main.cc
 
 .PHONY: clean
 clean:
-	rm -f *.o *.so bruce
+	rm -f *.o *.so bruce gtest
 

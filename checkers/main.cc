@@ -24,18 +24,18 @@ int main(int argc, char *argv[]) {
     len = read(STDIN_FILENO, buf, 1028);
     if(!strncmp(buf,"Player1", strlen("Player1"))) {
         fprintf(stderr, "I'm Player 1\n");
-        me = RED; 
+        me = RED_PLAYER; 
     }
     else {
         fprintf(stderr, "I'm Player 2\n");
-        me = BLACK;
+        me = BLACK_PLAYER;
     }
 
     /* Set up the board */ 
     state = new State();
     srand((unsigned int)time(0));
 
-    if (me == RED) goto determine_next_move;
+    if (me == RED_PLAYER) goto determine_next_move;
 
     for(;;) {
         len = read(STDIN_FILENO, buf, 1028);

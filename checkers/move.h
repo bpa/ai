@@ -1,8 +1,6 @@
 #ifndef MOVE_H
 #define MOVE_H
 #include <string>
-class Move;
-#include "state.h"
 
 using namespace std;
 
@@ -14,6 +12,8 @@ public:
 	Move(const char *);
 	void addTile(char);
 	void to_string(char *);
+	string str();
+	bool operator< (const Move &) const;
 };
 
 #endif
