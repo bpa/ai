@@ -11,7 +11,6 @@ using namespace std;
 
 TEST(board, init) {
 	Board b;
-b.say();
 	int red=0;
 	int black=0;
 	__u32 mask = 1;
@@ -52,6 +51,7 @@ TEST(board, basic_moves) {
 	Board b(
 " . . . ."
 ". r b . ");
+	b.say();
 	vector<Move> *moves = b.generate_moves(RED_PLAYER);
 	ASSERT_EQ((unsigned int)2, moves->size());
 	sort(moves->begin(), moves->end());

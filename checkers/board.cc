@@ -5,12 +5,12 @@
 
 using namespace std;
 
-static inline __u32 rol32(__u32 word, unsigned int shift)
+static inline __u32 rol(__u32 word, unsigned int shift)
 {
     return (word << shift) | (word >> (32 - shift));
 }
 
-static inline __u32 ror32(__u32 word, unsigned int shift)
+static inline __u32 ror(__u32 word, unsigned int shift)
 {
     return (word >> shift) | (word << (32 - shift));
 }
@@ -59,26 +59,110 @@ void Board::say() {
 	}
 }
 
-vector<Move> *Board::generate_moves(Player p) {
-	vector<Move> *moves = new vector<Move>();
+void Board::add_ur_moves(vector<Move> *moves, Player p) {
 	__u32 empty = ~(red | black);
-	if (p == RED_PLAYER) {
-		__u32 mask = ror32(red, 1);
-		__u32 valid = mask & empty & ~LEFT_COL;
+	__u32 pieces = p == RED_PLAYER ? kings & red : black;
+	if (pieces) {
+		__u32 mask = ror(pieces, 1);
+		__u32 valid = empty & mask & ~LEFT_COL;
+		cout << hex << valid << endl;
 		if (valid) {
 			__u32 t = 1;
-			for (int i=0; i<32; i++) {
+			for (int i=0; valid; i++) {
 				if (t & valid) {
-					__u32 start = r_ror32(i);
 					Move m;
-					m.addTile(loc[start]);
+					m.addTile(loc[i-1]);
 					m.addTile(loc[i]);
 					moves->push_back(m);
+					valid ^= t;
 				}
 				t <<= 1;
 			}
 		}
 	}
+}
+
+void Board::add_ul_moves(vector<Move> *moves, Player p) {
+	__u32 empty = ~(red | black);
+	__u32 pieces = p == RED_PLAYER ? kings & red : black;
+	if (pieces) {
+		__u32 mask = rol(pieces, 7);
+		__u32 valid = empty & mask & ~RIGHT_COL;
+		cout << hex << valid << endl;
+		if (valid) {
+			__u32 t = 1;
+			for (int i=0; valid; i++) {
+				if (t & valid) {
+					Move m;
+					m.addTile(loc[ror(i,7)]);
+					m.addTile(loc[i]);
+					moves->push_back(m);
+					valid ^= t;
+				}
+				t <<= 1;
+			}
+		}
+	}
+}
+
+void Board::add_dl_moves(vector<Move> *moves, Player p) {
+	__u32 empty = ~(red | black);
+	__u32 pieces = p == RED_PLAYER ? red : black & kings;
+	cout << hex << pieces << endl;
+	if (pieces) {
+		__u32 mask = ror(pieces, 1);
+		__u32 valid = empty & mask & ~RIGHT_COL;
+		cout << hex << valid << endl;
+		if (valid) {
+			__u32 t = 1;
+			for (int i=0; valid; i++) {
+				if (t & valid) {
+					Move m;
+					m.addTile(loc[i+1]);
+					m.addTile(loc[i]);
+					moves->push_back(m);
+					valid ^= t;
+				}
+				t <<= 1;
+			}
+		}
+	}
+}
+
+void Board::add_dr_moves(vector<Move> *moves, Player p) {
+	__u32 empty = ~(red | black);
+	__u32 pieces = p == RED_PLAYER ? red : black & kings;
+	cout << hex << pieces << endl;
+	if (pieces) {
+		__u32 mask = ror(pieces, 7);
+		__u32 valid = empty & mask & ~LEFT_COL;
+		cout << hex << valid << endl;
+		if (valid) {
+			__u32 t = 1;
+			for (int i=0; valid; i++) {
+				if (t & valid) {
+					Move m;
+					m.addTile(loc[(i+7)%32]);
+					m.addTile(loc[i]);
+					moves->push_back(m);
+					valid ^= t;
+				}
+				t <<= 1;
+			}
+		}
+	}
+}
+
+vector<Move> *Board::generate_moves(Player p) {
+	vector<Move> *moves = new vector<Move>();
+	add_ur_moves(moves, p);
+	cout << 1 << endl;
+	add_ul_moves(moves, p);
+	cout << 2 << endl;
+	add_dr_moves(moves, p);
+	cout << 3 << endl;
+	add_dl_moves(moves, p);
+	cout << 4 << endl;
 	return moves;
 }
 
