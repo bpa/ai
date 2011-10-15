@@ -15,10 +15,10 @@ static inline __u32 ror(__u32 word, unsigned int shift)
     return (word >> shift) | (word << (32 - shift));
 }
 
-static __u32 LEFT_COL   = 0x04040404;
-static __u32 RIGHT_COL  = 0x02020202;
-static __u32 TOP_ROW    = 0x82000820;
-static __u32 BOTTOM_ROW = 0x00041041;
+__u32 LEFT_COL   = 0x04040404;
+__u32 RIGHT_COL  = 0x02020202;
+__u32 TOP_ROW    = 0x82000820;
+__u32 BOTTOM_ROW = 0x00041041;
 
 int l[] = { 0x0, 0x800, 0x20, 0x80000000, 0x2000000, 0x400, 0x10, 0x40000000,
 			0x1000000, 0x8, 0x20000000, 0x800000, 0x20000, 0x4, 0x10000000,
@@ -49,7 +49,7 @@ Board::Board(const char *board_as_str) {
 
 void Board::say() {
 	for (int i=0; i<32; i++) {
-		int mask = l[i];
+		int mask = l[i+1];
 		if (i / 4 % 2 == 0) cout << ' ';
 		     if (mask &  red ) cout << (mask & kings ? 'R' : 'r');
 		else if (mask & black) cout << (mask & kings ? 'B' : 'b');
@@ -76,15 +76,77 @@ static void x(__u32 b) {
 #define shift_dl(mask) ror(mask, 1)
 #define shift_dr(mask) ror(mask, 7)
 
+#define jump_ind_ul(i) (i+14)%32
+#define jump_ind_ur(i) (i+2)%32
+#define jump_ind_dl(i) (i<2?i+30:i-2)
+#define jump_ind_dr(i) (i<14?i+18:i-14)
+
 #define ind_ul(i) (i+7)%32
 #define ind_ur(i) (i+1)%32
 #define ind_dl(i) (i==0?31:i-1)
 #define ind_dr(i) (i<7?i+25:i-7)
 
-#define easy(moves, empty, pieces, invalid_moves, shift, f) \
-	if (pieces) { \
+#define try_jump(invalid_move, shift, f) \
+	{ \
+		__u32 mask = shift(piece); \
+		__u32 valid = (p == RED_PLAYER ? black : red) & mask & ~(invalid_move); \
+		if (valid) { \
+			__u32 land = shift(valid); \
+			if (land & empty & ~(invalid_move)) { \
+				added_move = true; \
+				bool more_jumps; \
+				if (p == RED_PLAYER) \
+					more_jumps = jumps(moves, stack, f(ind), land, p, red^piece, black^valid, king); \
+				else \
+					more_jumps = jumps(moves, stack, f(ind), land, p, red^valid, black^piece, king); \
+				if (!more_jumps) { \
+					Move m; \
+					vector<int>::iterator it; \
+					for ( it=stack->begin() ; it < stack->end(); it++ ) \
+						m.addTile(*it); \
+					m.addTile(loc[f(ind)]); \
+					moves->push_back(m); \
+				} \
+			} \
+		} \
+	}
+
+bool jumps(vector<Move> *moves, vector<int> *stack, int ind, __u32 piece, Player p, __u32 red, __u32 black, bool king) {
+	bool added_move = false;
+	__u32 empty = ~(red | black);
+	stack->push_back(loc[ind]);
+
+	if (p == BLACK_PLAYER || king) {
+		try_jump((BOTTOM_ROW | RIGHT_COL), shift_ul, jump_ind_ul);// ↖
+		try_jump((BOTTOM_ROW | LEFT_COL), shift_ur, jump_ind_ur);// ↗
+	}
+
+	if (p == RED_PLAYER || king) {
+		try_jump((TOP_ROW | LEFT_COL), shift_dr, jump_ind_dr);// ↘
+		try_jump((TOP_ROW | RIGHT_COL), shift_dl, jump_ind_dl);// ↙
+	}
+
+	stack->pop_back();
+	return added_move;
+}
+
+void Board::add_jump_moves(vector<Move> *moves, Player p) {
+	__u32 t = 1;
+	__u32 pieces = p == RED_PLAYER ? red : black;
+	vector<int> stack;
+	for (int i=0; pieces; i++) {
+		if (t & pieces) {
+			jumps(moves, &stack, i, t, p, red, black, kings&t);
+			pieces ^= t;
+		}
+		t <<= 1;
+	}
+}
+
+#define easy(invalid_move, shift, f) \
+	{ \
 		__u32 mask = shift(pieces); \
-		__u32 valid = empty & mask & ~invalid_moves; \
+		__u32 valid = empty & mask & ~(invalid_move); \
 		if (valid) { \
 			__u32 t = 1; \
 			for (int i=0; valid; i++) { \
@@ -100,101 +162,27 @@ static void x(__u32 b) {
 		} \
 	}
 
-vector<Move> *Board::generate_moves(Player p) {
-	vector<Move> *moves = new vector<Move>();
+void Board::add_normal_moves(vector<Move> *moves, Player p) {
 	__u32 empty = ~(red | black);
 
 	__u32 pieces = p == RED_PLAYER ? red & kings : black;
-	easy(moves, empty, pieces, (BOTTOM_ROW | RIGHT_COL), shift_ul, ind_dr);// ↖
-	easy(moves, empty, pieces, (BOTTOM_ROW | LEFT_COL), shift_ur, ind_dl);// ↗
+	if (pieces) {
+		easy(BOTTOM_ROW | RIGHT_COL, shift_ul, ind_dr);// ↖
+		easy(BOTTOM_ROW | LEFT_COL, shift_ur, ind_dl);// ↗
+	}
 
 	pieces = p == RED_PLAYER ? red : black & kings;
-	easy(moves, empty, pieces, (TOP_ROW | LEFT_COL), shift_dr, ind_ul);// ↘
-	easy(moves, empty, pieces, (TOP_ROW | RIGHT_COL), shift_dl, ind_ur);// ↙
+	if (pieces) {
+		easy(TOP_ROW | LEFT_COL, shift_dr, ind_ul);// ↘
+		easy(TOP_ROW | RIGHT_COL, shift_dl, ind_ur);// ↙
+	}
+}
 
+vector<Move> *Board::generate_moves(Player p) {
+	vector<Move> *moves = new vector<Move>();
+	add_jump_moves(moves, p);
+	if (moves->size() == 0)
+		add_normal_moves(moves, p);
 	return moves;
 }
 
-/* Finds legal non-jump moves for the King at position x,y */
-//void move_list_add_king_moves(Board *board, int x, int y) {
-//    int i,j,x1,y1;
-//    Move move;
-//    memset(move,0,sizeof(Move));
-//
-//    /* Check the four adjacent squares */
-//    for(j=-1; j<2; j+=2)
-//    for(i=-1; i<2; i+=2)
-//    {
-//        y1 = y+j; x1 = x+i;
-//        /* Make sure we're not off the edge of the board */
-//        if(y1<0 || y1>7 || x1<0 || x1>7) continue; 
-//        if(empty(*board[y1][x1])) {  /* The square is empty, so we can move there */
-//            move[0] = number(*board[y][x])+1;
-//            move[1] = number(*board[y1][x1])+1;    
-//            move_list_add(moves, &move);
-//        }
-//    }
-//}
-
-/* Finds legal non-jump moves for the Piece at position x,y */
-//void move_list_add_moves(MoveList *moves, Board *board, Player player, int x, int y) 
-//{
-//    int i,j,x1,y1;
-//    Move move;
-//
-//    memset(move,0,sizeof(Move));
-//
-//    /* Check the two adjacent squares in the forward direction */
-//    if(player == 0) j = 1; else j = -1;
-//    for(i=-1; i<2; i+=2)
-//    {
-//        y1 = y+j; x1 = x+i;
-//        /* Make sure we're not off the edge of the board */
-//        if(y1<0 || y1>7 || x1<0 || x1>7) continue; 
-//        if(empty(*board[y1][x1])) {  /* The square is empty, so we can move there */
-//            move[0] = number(*board[y][x])+1;
-//            move[1] = number(*board[y1][x1])+1;    
-//            move_list_add(moves, &move);
-//        }
-//    }
-//}
-
-/* Determines all of the legal moves possible for a given state */
-//void FindLegalMoves(MoveList *moves, Board *b, Player player) {
-/*
-    int x,y;
-    char move[12], board[8][8];
-
-    memset(move,0,sizeof(Move));
-
-    for(y=0; y<8; y++)
-    for(x=0; x<8; x++)
-    {
-        if(x%2 != y%2 && color(board[y][x]) == player && !empty(board[y][x])) {
-            if(king(board[y][x])) {
-                move[0] = number(*board[y][x])+1;
-                FindKingJump(player,board,move,1,x,y);
-                if(!jumpptr) move_list_add_king_moves(board,x,y);
-            } 
-            else if(piece(*board[y][x])) {
-                move[0] = number(*board[y][x])+1;
-                FindJump(player,board,move,1,x,y);
-                if(!jumpptr) move_list_add_moves(moves, board, player, x, y);
-            }
-        }    
-    }
-    if(jumpptr) {
-        for(x=0; x<jumpptr; x++) 
-        for(y=0; y<12; y++) 
-        //state->movelist[x][y] = jumplist[x][y];
-        //state->numLegalMoves = jumpptr;
-    } 
-    else {
-        for(x=0; x<numLegalMoves; x++) 
-        for(y=0; y<12; y++) 
-        //state->movelist[x][y] = movelist[x][y];
-        //state->numLegalMoves = numLegalMoves;
-    }
-    return (jumpptr+numLegalMoves);
-*/
-//}

@@ -33,6 +33,10 @@ public:
 	Board(Board *, Move *);
 	void say();
 	vector<Move> *generate_moves(Player);
+
+protected:
+	void add_jump_moves(vector<Move> *, Player);
+	void add_normal_moves(vector<Move> *, Player);
 };
 
 #endif

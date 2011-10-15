@@ -161,7 +161,7 @@ TEST(board, borders) {
 
 }
 
-TEST(board, basic_jump) {
+TEST(board, jumps) {
 	Board b(
 " . r . ."
 ". . b . "
@@ -169,5 +169,130 @@ TEST(board, basic_jump) {
 	vector<Move> *moves = b.generate_moves(RED_PLAYER);
 	ASSERT_EQ((unsigned int)1, moves->size());
 	sort(moves->begin(), moves->end());
-	ASSERT_STREQ("2-8", moves->at(0).str().c_str());
+	ASSERT_STREQ("2-11", moves->at(0).str().c_str());
+
+	b = Board(
+" . . . ."
+". b b . "
+" . R . ."
+". b b . "
+" . . . .");
+	moves = b.generate_moves(RED_PLAYER);
+	ASSERT_EQ((unsigned int)4, moves->size());
+	sort(moves->begin(), moves->end());
+	ASSERT_STREQ("10-1", moves->at(0).str().c_str());
+	ASSERT_STREQ("10-3", moves->at(1).str().c_str());
+	ASSERT_STREQ("10-17", moves->at(2).str().c_str());
+	ASSERT_STREQ("10-19", moves->at(3).str().c_str());
+
+	b = Board(
+" . . . R"
+". . . b "
+" . . b .");
+	moves = b.generate_moves(RED_PLAYER);
+	ASSERT_EQ((unsigned int)0, moves->size());
+}
+
+TEST(board, multi_jumps) {
+	Board b(
+" . r . ."
+". . b . "
+" . . . ."
+". . . b ");
+	vector<Move> *moves = b.generate_moves(RED_PLAYER);
+	ASSERT_EQ((unsigned int)1, moves->size());
+	sort(moves->begin(), moves->end());
+	ASSERT_STREQ("2-11-20", moves->at(0).str().c_str());
+
+	b = Board(
+" . r . ."
+". . b . "
+" . . . ."
+". . b b ");
+	moves = b.generate_moves(RED_PLAYER);
+	ASSERT_EQ((unsigned int)2, moves->size());
+	sort(moves->begin(), moves->end());
+	ASSERT_STREQ("2-11-18", moves->at(0).str().c_str());
+	ASSERT_STREQ("2-11-20", moves->at(1).str().c_str());
+
+	b = Board(
+" . . . R"
+". . b b "
+" . . . ."
+". . . b "
+" . . . ."
+". . . b ");
+	moves = b.generate_moves(RED_PLAYER);
+	ASSERT_EQ((unsigned int)2, moves->size());
+	sort(moves->begin(), moves->end());
+	ASSERT_STREQ("4-11-2", moves->at(0).str().c_str());
+	ASSERT_STREQ("4-11-20-27", moves->at(1).str().c_str());
+
+	b = Board(
+" . R . ."
+". b b . "
+" . . . ."
+". b b . ");
+	moves = b.generate_moves(RED_PLAYER);
+	ASSERT_EQ((unsigned int)2, moves->size());
+	sort(moves->begin(), moves->end());
+	ASSERT_STREQ("2-9-18-11-2", moves->at(0).str().c_str());
+	ASSERT_STREQ("2-11-18-9-2", moves->at(1).str().c_str());
+}
+
+TEST(board, king_borders) {
+	Board b(
+" . . . b"
+". . . R "
+" . . . ."
+". . . . "
+" . . . ."
+". . . . "
+" B . . ."
+"r . . . ");
+	vector<Move> *moves = b.generate_moves(RED_PLAYER);
+	ASSERT_EQ((unsigned int)3, moves->size());
+
+	moves = b.generate_moves(BLACK_PLAYER);
+	ASSERT_EQ((unsigned int)3, moves->size());
+
+	b = Board(
+" . b b ."
+". . R . "
+" . . . ."
+". . . . "
+" . . . ."
+". . . . "
+" . B . ."
+". r r . ");
+	moves = b.generate_moves(RED_PLAYER);
+	ASSERT_EQ((unsigned int)2, moves->size());
+	sort(moves->begin(), moves->end());
+	ASSERT_STREQ("7-10", moves->at(0).str().c_str());
+	ASSERT_STREQ("7-11", moves->at(1).str().c_str());
+
+	moves = b.generate_moves(BLACK_PLAYER);
+	ASSERT_EQ((unsigned int)2, moves->size());
+	sort(moves->begin(), moves->end());
+	ASSERT_STREQ("26-22", moves->at(0).str().c_str());
+	ASSERT_STREQ("26-23", moves->at(1).str().c_str());
+
+	b = Board(
+" . . . ."
+"b . . . "
+" R . . r"
+"b . . B "
+" . . . r"
+". . . . "
+" . . . ."
+". . . . ");
+	moves = b.generate_moves(RED_PLAYER);
+	ASSERT_EQ((unsigned int)1, moves->size());
+	sort(moves->begin(), moves->end());
+	ASSERT_STREQ("12-19", moves->at(0).str().c_str());
+
+	moves = b.generate_moves(BLACK_PLAYER);
+	ASSERT_EQ((unsigned int)1, moves->size());
+	sort(moves->begin(), moves->end());
+	ASSERT_STREQ("13-6", moves->at(0).str().c_str());
 }
