@@ -6,11 +6,12 @@
 #include "player.h"
 #include "move.h"
 
-#define NONE     0x00
-#define RED      0x00
-#define OCCUPIED 0x01
-#define KING     0x02
-#define BLACK    0x04
+class Board;
+
+typedef struct st_child {
+	Move move;
+	Board *board;
+} Child;
 
 /*---------------
    11  05  31  25 
@@ -27,16 +28,19 @@ public:
 	__u32 red;
 	__u32 black;
 	__u32 kings;
+	Player player;
+	vector<Board*> parents;
+	vector<Child*> children;
+	int value, min, max, refcount;
 
-	Board();
-	Board(const char *);
+	Board(Player);
+	Board(Player, const char *);
 	Board(Board *, Move *);
 	void say();
-	vector<Move> *generate_moves(Player);
-
-protected:
-	void add_jump_moves(vector<Move> *, Player);
-	void add_normal_moves(vector<Move> *, Player);
+	void generate_moves();
+	void init();
+	void add_jump_moves();
+	void add_normal_moves();
 };
 
 #endif

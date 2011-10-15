@@ -1,9 +1,8 @@
 #include <stdlib.h>
 #include "choice.h"
 
-Move *choice_random(State *state, Player p) {
+Move *choice_random(Board *board) {
 	int i;
-	vector<Move> *moves = state->moves_for_player(p);
-	i = rand() % moves->size();
-	return &moves->at(i);
+	i = rand() % board->children.size();
+	return &board->children.at(i)->move;
 }

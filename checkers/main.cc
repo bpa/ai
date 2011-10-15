@@ -5,14 +5,13 @@
 #include <unistd.h>
 #include "choice.h"
 #include "move.h"
-#include "state.h"
  
 int main(int argc, char *argv[]) {
 	float time_limit;
 	int max_depth, len;
 	Player me;
     char buf[1028];
-	State *state, *new_state;
+	Board *state, *new_state;
 	Move *move;
 
     /* Convert command line parameters */
@@ -32,7 +31,7 @@ int main(int argc, char *argv[]) {
     }
 
     /* Set up the board */ 
-    state = new State();
+    state = new Board(me);
     srand((unsigned int)time(0));
 
     if (me == RED_PLAYER) goto determine_next_move;
@@ -42,15 +41,15 @@ int main(int argc, char *argv[]) {
         buf[len]='\0';
 
         move = new Move(buf);
-        new_state = new State(state, move);
+        new_state = new Board(state, move);
 		delete(state);
 		state = new_state;
 		delete(move);
         
 determine_next_move:
-        move = choice_random(state, me);
+        move = choice_random(state);
         if (move != NULL) {
-        	new_state = new State(state, move);
+        	new_state = new Board(state, move);
 			delete(state);
 			state = new_state;
             move->to_string(buf);
