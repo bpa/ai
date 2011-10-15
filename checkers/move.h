@@ -11,9 +11,10 @@ public:
 	Move();
 	Move(const char *);
 	void addTile(char);
-	void to_string(char *);
-	string str();
+	string str() const;
 	bool operator< (const Move &) const;
 };
+
+ostream& operator<< (ostream& out, const Move &);
 
 #endif

@@ -49,12 +49,12 @@ int loc[] = {32, 28, 13, 9, 6, 2, 31, 27, 24, 20, 5, 1, 30, 26, 23, 19, 16, 12, 
 void x(__u32 b) {
 	for (int i=0; i<32; i++) {
 		int mask = l[i+1];
-		if (i / 4 % 2 == 0) cout << ' ';
-		cout << (mask & b ? 'X' : '.');
-		if (i / 4 % 2 != 0) cout << ' ';
-		if (i % 4 == 3) cout << endl;
+		if (i / 4 % 2 == 0) cerr << ' ';
+		cerr << (mask & b ? 'X' : '.');
+		if (i / 4 % 2 != 0) cerr << ' ';
+		if (i % 4 == 3) cerr << endl;
 	}
-	cout << endl;
+	cerr << endl;
 }
 
 Board::Board(Player p) {
@@ -103,10 +103,14 @@ Board::Board(Board *parent, Move *move) {
 	if (parent->player == RED_PLAYER) {
 		red ^= l[(int)move->tiles[0]];
 		red ^= l[(int)move->tiles[move->moves-1]];
+		if (l[(int)move->tiles[move->moves-1]] & BOTTOM_ROW)
+			kings |= l[(int)move->tiles[move->moves-1]];
 	}
 	else {
 		black ^= l[(int)move->tiles[0]];
 		black ^= l[(int)move->tiles[move->moves-1]];
+		if (l[(int)move->tiles[move->moves-1]] & TOP_ROW)
+			kings |= l[(int)move->tiles[move->moves-1]];
 	}
 	for (int i=0; i<move->moves-1; i++) {
 		int diff = move->tiles[i+1] - move->tiles[i];
@@ -126,16 +130,17 @@ void Board::init() {
 }
 
 void Board::say() {
+	cerr << "Player: " << player << endl;
 	for (int i=0; i<32; i++) {
 		int mask = l[i+1];
-		if (i / 4 % 2 == 0) cout << ' ';
-		     if (mask &  red ) cout << (mask & kings ? 'R' : 'r');
-		else if (mask & black) cout << (mask & kings ? 'B' : 'b');
-		else                   cout << '.';
-		if (i / 4 % 2 != 0) cout << ' ';
-		if (i % 4 == 3) cout << endl;
+		if (i / 4 % 2 == 0) cerr << ' ';
+		     if (mask &  red ) cerr << (mask & kings ? 'R' : 'r');
+		else if (mask & black) cerr << (mask & kings ? 'B' : 'b');
+		else                   cerr << '.';
+		if (i / 4 % 2 != 0) cerr << ' ';
+		if (i % 4 == 3) cerr << endl;
 	}
-	cout << endl;
+	cerr << endl;
 }
 
 #define try_jump(invalid_move, shift, f) \

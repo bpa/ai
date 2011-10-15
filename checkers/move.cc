@@ -15,14 +15,14 @@ Move::Move() {
 Move::Move(const char *buf) {
     int i=0;
 	bzero(tiles, 13);
-	moves = 0;
 	const char *ind = buf;
     while(*ind != '\0') {
         tiles[i] = (char) atoi(ind);
 		i++;
 		while (isdigit(*ind)) ind++;
-		ind++;
+		if (*ind != '\0') ind++;
     }
+	moves = i;
 }
 
 void Move::addTile(char tile) {
@@ -30,20 +30,7 @@ void Move::addTile(char tile) {
 	moves++;
 }
 
-void Move::to_string(char *buf) {
-    int i;
-	char temp[8];
-
-    buf[0] = '\0';
-    for(i=0; i<moves; i++) {
-		sprintf(temp, "%d", tiles[i]);
-		strcat(buf, temp);
-		strcat(buf, "-");
-    }
-    buf[strlen(buf)-1] = '\0';
-}
-
-string Move::str() {
+string Move::str() const {
 	stringstream ss;
 	int i = 0;
 	if (i<moves) {
@@ -62,4 +49,8 @@ bool Move::operator< (const Move &that) const {
 		if (tiles[i] < that.tiles[i]) return true;
 	}
 	return false;
+}
+
+ostream& operator<<(ostream &out, const Move &m) {
+  return out << m.str();
 }

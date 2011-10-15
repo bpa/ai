@@ -293,13 +293,16 @@ TEST(board, king_borders) {
 	ASSERT_STREQ("13-6", MOVE(moves,0));
 }
 
-#define ASSERT_BOARD(ind, p, RED, BLACK, KINGS) \
-{ \
-	Board *child = moves->at(ind)->board; \
+#define ASSERT_STATE(child, p, RED, BLACK, KINGS) \
 	ASSERT_EQ(p,           child->player); \
 	ASSERT_EQ((uint) RED , child->red); \
 	ASSERT_EQ((uint)BLACK, child->black); \
-	ASSERT_EQ((uint)KINGS, child->kings); \
+	ASSERT_EQ((uint)KINGS, child->kings);
+
+#define ASSERT_BOARD(ind, p, RED, BLACK, KINGS) \
+{ \
+	Board *child = moves->at(ind)->board; \
+	ASSERT_STATE(child, p, RED, BLACK, KINGS) \
 }
 	
 TEST(board, apply_move) {
@@ -327,4 +330,43 @@ TEST(board, apply_move) {
 	ASSERT_EQ((uint)2, moves->size());
 	ASSERT_BOARD(0, BLACK_PLAYER, pos(5), 0, pos(5));
 	ASSERT_BOARD(1, BLACK_PLAYER, pos(5), 0, pos(5));
+}
+	
+TEST(board, apply_string_move) {
+	Board b(RED_PLAYER,
+" . . . r");
+	Board next = Board(&b, new Move("4-8"));
+	ASSERT_STATE((&next), BLACK_PLAYER, pos(24), 0, 0);
+
+	b = Board(BLACK_PLAYER,
+" . . . ."
+". B . . ");
+	next = Board(&b, new Move("6-1"));
+	ASSERT_STATE((&next), RED_PLAYER, 0, pos(11), pos(11));
+
+	b = Board(RED_PLAYER,
+" . R . ."
+". b b . "
+" . . . ."
+". B B . ");
+	next = Board(&b, new Move("2-11-18-9-2"));
+	ASSERT_STATE((&next), BLACK_PLAYER, pos(5), 0, pos(5));
+}
+
+TEST(board, king_me) {
+	Board b(RED_PLAYER,
+" . . . ."
+". . . b "
+" . . . ."
+". . . . "
+" . . . ."
+". . . . "
+" . . r ."
+". . . . ");
+	Board next = Board(&b, new Move("27-32"));
+	ASSERT_STATE((&next), BLACK_PLAYER, pos(0), pos(24), pos(0));
+
+	b.player = BLACK_PLAYER;
+	next = Board(&b, new Move("8-4"));
+	ASSERT_STATE((&next), RED_PLAYER, pos(7), pos(25), pos(25));
 }
