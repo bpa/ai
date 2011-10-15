@@ -33,12 +33,6 @@ public:
 	Board(Board *, Move *);
 	void say();
 	vector<Move> *generate_moves(Player);
-
-protected:
-	void add_ur_moves(vector<Move> *, Player);
-	void add_ul_moves(vector<Move> *, Player);
-	void add_dr_moves(vector<Move> *, Player);
-	void add_dl_moves(vector<Move> *, Player);
 };
 
 #endif

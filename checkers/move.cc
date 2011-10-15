@@ -1,3 +1,4 @@
+#include <iostream>
 #include <sstream>
 #include <ctype.h>
 #include <stdio.h>
@@ -34,7 +35,7 @@ void Move::to_string(char *buf) {
 	char temp[8];
 
     buf[0] = '\0';
-    for(i=0; tiles[i] != '\0'; i++) {
+    for(i=0; i<moves; i++) {
 		sprintf(temp, "%d", tiles[i]);
 		strcat(buf, temp);
 		strcat(buf, "-");
@@ -44,10 +45,13 @@ void Move::to_string(char *buf) {
 
 string Move::str() {
 	stringstream ss;
-	char *t = tiles;
-	if (*t != '\0') ss << *t;
-	for(; *t!='\0'; t++) {
-		ss << '-' << *t;
+	int i = 0;
+	if (i<moves) {
+		ss << (int)tiles[i];
+		i++;
+	}
+	for(; i<moves; i++) {
+		ss << '-' << (int)tiles[i];
 	}
 	return ss.str();
 }
