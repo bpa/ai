@@ -129,18 +129,18 @@ void Board::init() {
 	refcount = 1;
 }
 
-void Board::say() {
-	cerr << "Player: " << player << endl;
+ostream &operator<<(ostream &out, const Board &b) {
+	out << "Player: " << b.player << endl;
 	for (int i=0; i<32; i++) {
 		int mask = l[i+1];
-		if (i / 4 % 2 == 0) cerr << ' ';
-		     if (mask &  red ) cerr << (mask & kings ? 'R' : 'r');
-		else if (mask & black) cerr << (mask & kings ? 'B' : 'b');
-		else                   cerr << '.';
-		if (i / 4 % 2 != 0) cerr << ' ';
-		if (i % 4 == 3) cerr << endl;
+		if (i / 4 % 2 == 0) out << ' ';
+		     if (mask &  b.red ) out << (mask & b.kings ? 'R' : 'r');
+		else if (mask & b.black) out << (mask & b.kings ? 'B' : 'b');
+		else                   out << '.';
+		if (i / 4 % 2 != 0) out << ' ';
+		if (i % 4 == 3) out << endl;
 	}
-	cerr << endl;
+	return out;
 }
 
 #define try_jump(invalid_move, shift, f) \
@@ -243,3 +243,20 @@ void Board::generate_moves() {
 		add_normal_moves();
 }
 
+bool Board::operator< (const Board &that) const {
+	if ( red   < that.red)    return true;
+	if (black  < that.black)  return true;
+	if (kings  < that.kings)  return true;
+	if (player < that.player) return true;
+	return false;
+}
+
+void Board::operator= (const Board &that) {
+	player = that.player;
+	red   = that.red;
+	black = that.black;
+	kings = that.kings;
+	value = that.value;
+	min = that.min;
+	max = that.max;
+}

@@ -36,11 +36,14 @@ public:
 	Board(Player);
 	Board(Player, const char *);
 	Board(Board *, Move *);
-	void say();
 	void generate_moves();
 	void init();
 	void add_jump_moves();
 	void add_normal_moves();
+	bool operator< (const Board &) const;
+	void operator= (const Board &);
 };
+
+ostream &operator<<(ostream &, const Board &);
 
 #endif
