@@ -41,8 +41,6 @@ Move *AI::choose_next_move() {
 }
 
 void AI::execute_move(Move *m) {
-	cerr << current << endl;
-	cerr << *m << endl;
 	Board *next = new Board(current, m);
 	Board *cache = states[*next];
 	if (cache == NULL) {
@@ -63,10 +61,8 @@ void AI::search() {
 			break;
 		Board key = backlog.front();
 		backlog.pop();
-	cerr << key << endl;
 		Board *b = states[key];
 		b->generate_moves();
-cerr << "Adding children" << endl;
 		vector<Child*>::iterator it;
 		for (it=b->children.begin(); it < b->children.end(); it++) {
 			Child *child = *it;
@@ -77,12 +73,9 @@ cerr << "Adding children" << endl;
 				cache = child->board;
 			}
 			INCREF(cache);
+			break;
 		}
 		nodes++;
-map<Board, Board*>::iterator ki;
-for(ki=states.begin(); ki!=states.end(); ki++) {
-	cerr << (*ki).first << endl;
-}
 	}
 	cerr << "Processed " << nodes << " nodes" << endl;
 }

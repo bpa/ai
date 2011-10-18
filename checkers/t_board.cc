@@ -370,3 +370,13 @@ TEST(board, king_me) {
 	next = Board(&b, new Move("8-4"));
 	ASSERT_STATE((&next), RED_PLAYER, pos(7), pos(25), pos(25));
 }
+
+TEST(board, lt) {
+	Board a(RED_PLAYER, " . . . r");
+	Board b(RED_PLAYER, " . . . r");
+	Board c = a;
+	ASSERT_FALSE(a < b);
+	ASSERT_FALSE(b < a);
+	ASSERT_FALSE(a < c);
+	ASSERT_FALSE(c < a);
+}
