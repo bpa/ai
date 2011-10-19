@@ -8,20 +8,22 @@ TEST(ai, cache) {
 	Board a(RED_PLAYER,
 " . . . r");
 	a.max = 32;
-	ai.states[a] = &a;
+	g_tree_insert(ai.states, &a, &a);
 
 	Board b(RED_PLAYER,
 " . . . b");
-	ai.states[b] = &b;
+	g_tree_insert(ai.states, &b, &b);
 	b.max = 16;
 
 	Board c(RED_PLAYER,
 " . . . b");
-	Board *ref = ai.states[c];
+	Board *ref = (Board*)g_tree_lookup(ai.states, &c);
 	ASSERT_TRUE(ref != NULL);
+	ASSERT_TRUE(ref == &b);
 	ASSERT_EQ(16, ref->max);
 
-	ref = ai.states[a];
+	ref = (Board*)g_tree_lookup(ai.states, &a);
 	ASSERT_TRUE(ref != NULL);
+	ASSERT_TRUE(ref == &a);
 	ASSERT_EQ(32, ref->max);
 }

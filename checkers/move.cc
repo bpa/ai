@@ -30,7 +30,7 @@ void Move::addTile(char tile) {
 	moves++;
 }
 
-string Move::str() const {
+const char *Move::str() const {
 	stringstream ss;
 	int i = 0;
 	if (i<moves) {
@@ -40,7 +40,7 @@ string Move::str() const {
 	for(; i<moves; i++) {
 		ss << '-' << (int)tiles[i];
 	}
-	return ss.str();
+	return ss.str().c_str();
 }
 
 bool Move::operator< (const Move &that) const {
@@ -49,6 +49,14 @@ bool Move::operator< (const Move &that) const {
 		if (tiles[i] < that.tiles[i]) return true;
 	}
 	return false;
+}
+
+int Move::cmp (const Move *that) const {
+	if (moves != that->moves) return moves - that->moves;
+	for (int i=0; i<moves; i++) {
+		if (tiles[i] != that->tiles[i]) return tiles[i] - that->tiles[i];
+	}
+	return 0;
 }
 
 ostream& operator<<(ostream &out, const Move &m) {

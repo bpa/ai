@@ -4,7 +4,24 @@
 #include <map>
 #include <queue>
 #include <vector>
+#include <glib.h>
 #include "board.h"
+
+typedef struct st_key {
+	__u32 red;
+	__u32 black;
+	__u32 kings;
+	__u32 player;
+} Key;
+
+#define KEY(id, board) \
+  Key id; \
+  id.red = board->red; \
+  id.black = board->black; \
+  id.kings = board->kings; \
+  id.player = board->player;
+
+bool key_cmp(Key &, Key &);
 
 class AI {
 public:
@@ -16,9 +33,10 @@ public:
 	void gc();
 
 	Board *current;
-	map<Board, Board*> states;
-	queue<Board> backlog;
-	queue<Board*> garbage;
+	int states_in_memory;
+	GTree *states;
+	GQueue *backlog;
+	GQueue *garbage;
 };
 
 #endif

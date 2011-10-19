@@ -1,6 +1,6 @@
 #ifndef BOARD_H
 #define BOARD_H
-#include <vector>
+#include <glib.h>
 #include <asm/types.h>
 #include <sys/types.h>
 #include "player.h"
@@ -29,13 +29,14 @@ public:
 	__u32 black;
 	__u32 kings;
 	Player player;
-	vector<Board*> parents;
-	vector<Child*> children;
+	GList *parents;
+	GList *children;
 	int value, min, max, refcount;
 
 	Board(Player);
 	Board(Player, const char *);
 	Board(Board *, Move *);
+	~Board();
 	void generate_moves();
 	void init();
 	void add_jump_moves();

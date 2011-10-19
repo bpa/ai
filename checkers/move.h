@@ -11,8 +11,9 @@ public:
 	Move();
 	Move(const char *);
 	void addTile(char);
-	string str() const;
+	const char *str() const;
 	bool operator< (const Move &) const;
+	int cmp(const Move *) const;
 };
 
 ostream& operator<< (ostream& out, const Move &);

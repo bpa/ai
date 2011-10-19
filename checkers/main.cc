@@ -34,11 +34,14 @@ int main(int argc, char *argv[]) {
 		len = read(STDIN_FILENO, buf, 1028);
 		buf[len] = '\0';
         ai.move(buf);
+		cerr << *ai.current << endl;
         
 determine_next_move:
         Move *move = ai.choose_next_move();
-        if (move != NULL)
+        if (move != NULL) {
 			cout << *move << flush;
+			cerr << *ai.current << endl;
+		}
         else
 			return 1;
     }

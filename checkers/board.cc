@@ -1,4 +1,6 @@
 #include <asm/types.h>
+#include <stdlib.h>
+#include <vector>
 #include <iostream>
 #include <strings.h>
 #include "board.h"
@@ -126,7 +128,14 @@ Board::Board(Board *parent, Move *move) {
 void Board::init() {
 	value = bits(red) + bits(red & kings) - bits(black) - bits(black & kings);
 	min = max = value;
-	refcount = 1;
+	refcount = 0;
+	parents = NULL;
+	children = NULL;
+}
+
+Board::~Board() {
+	g_list_free(parents);
+	g_list_free(children);
 }
 
 ostream &operator<<(ostream &out, const Board &b) {
@@ -163,7 +172,7 @@ ostream &operator<<(ostream &out, const Board &b) {
 						c->move.addTile(*it); \
 					c->move.addTile(loc[f(ind)]); \
 					c->board = new Board(board, &c->move); \
-					board->children.push_back(c); \
+					board->children = g_list_prepend(board->children, c); \
 				} \
 			} \
 		} \
@@ -209,11 +218,12 @@ void Board::add_jump_moves() {
 			__u32 t = 1; \
 			for (int i=0; valid; i++) { \
 				if (t & valid) { \
-					Child *c = new Child; \
+					Child *c = (Child*)malloc(sizeof(Child)); \
+					c->move = Move(); \
 					c->move.addTile(loc[f(i)]); \
 					c->move.addTile(loc[i]); \
 					c->board = new Board(this, &c->move); \
-					children.push_back(c); \
+					children = g_list_prepend(children, c); \
 					valid ^= t; \
 				} \
 				t <<= 1; \
@@ -239,7 +249,7 @@ void Board::add_normal_moves() {
 
 void Board::generate_moves() {
 	add_jump_moves();
-	if (children.size() == 0)
+	if (children == NULL)
 		add_normal_moves();
 }
 
