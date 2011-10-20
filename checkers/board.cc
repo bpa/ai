@@ -1,7 +1,7 @@
 #include <asm/types.h>
 #include <stdlib.h>
-#include <vector>
 #include <iostream>
+#include <string.h>
 #include <strings.h>
 #include "board.h"
 
@@ -129,6 +129,7 @@ void Board::init() {
 	value = bits(red) + bits(red & kings) - bits(black) - bits(black & kings);
 	min = max = value;
 	refcount = 0;
+	processed = 0;
 	parents = NULL;
 	children = NULL;
 }
@@ -136,20 +137,6 @@ void Board::init() {
 Board::~Board() {
 	g_list_free(parents);
 	g_list_free(children);
-}
-
-ostream &operator<<(ostream &out, const Board &b) {
-	out << "Player: " << b.player << endl;
-	for (int i=0; i<32; i++) {
-		int mask = l[i+1];
-		if (i / 4 % 2 == 0) out << ' ';
-		     if (mask &  b.red ) out << (mask & b.kings ? 'R' : 'r');
-		else if (mask & b.black) out << (mask & b.kings ? 'B' : 'b');
-		else                   out << '.';
-		if (i / 4 % 2 != 0) out << ' ';
-		if (i % 4 == 3) out << endl;
-	}
-	return out;
 }
 
 #define try_jump(invalid_move, shift, f) \
@@ -167,9 +154,7 @@ ostream &operator<<(ostream &out, const Board &b) {
 					more_jumps = jumps(board, stack, f(ind), land, p, red^valid, black^piece, king); \
 				if (!more_jumps) { \
 					Child *c = new Child; \
-					vector<int>::iterator it; \
-					for ( it=stack->begin() ; it < stack->end(); it++ ) \
-						c->move.addTile(*it); \
+					memcpy(&c->move, stack, sizeof(Move)); \
 					c->move.addTile(loc[f(ind)]); \
 					c->board = new Board(board, &c->move); \
 					board->children = g_list_prepend(board->children, c); \
@@ -178,10 +163,10 @@ ostream &operator<<(ostream &out, const Board &b) {
 		} \
 	}
 
-bool jumps(Board *board, vector<int> *stack, int ind, __u32 piece, Player p, __u32 red, __u32 black, bool king) {
+bool jumps(Board *board, Move *stack, int ind, __u32 piece, Player p, __u32 red, __u32 black, bool king) {
 	bool added_move = false;
 	__u32 empty = ~(red | black);
-	stack->push_back(loc[ind]);
+	stack->addTile(loc[ind]);
 
 	if (p == BLACK_PLAYER || king) {
 		try_jump((BOTTOM_ROW | RIGHT_COL), shift_ul, jump_ind_ul);// ↖
@@ -193,14 +178,14 @@ bool jumps(Board *board, vector<int> *stack, int ind, __u32 piece, Player p, __u
 		try_jump((TOP_ROW | RIGHT_COL), shift_dl, jump_ind_dl);// ↙
 	}
 
-	stack->pop_back();
+	stack->moves--;
 	return added_move;
 }
 
 void Board::add_jump_moves() {
 	__u32 t = 1;
 	__u32 pieces = player == RED_PLAYER ? red : black;
-	vector<int> stack;
+	Move stack;
 	for (int i=0; pieces; i++) {
 		if (t & pieces) {
 			jumps(this, &stack, i, t, player, red, black, kings&t);
@@ -248,25 +233,10 @@ void Board::add_normal_moves() {
 }
 
 void Board::generate_moves() {
+	children = NULL;
 	add_jump_moves();
 	if (children == NULL)
 		add_normal_moves();
+	processed = 1;
 }
 
-bool Board::operator< (const Board &that) const {
-	if ( red   < that.red)    return true;
-	if (black  < that.black)  return true;
-	if (kings  < that.kings)  return true;
-	if (player < that.player) return true;
-	return false;
-}
-
-void Board::operator= (const Board &that) {
-	player = that.player;
-	red   = that.red;
-	black = that.black;
-	kings = that.kings;
-	value = that.value;
-	min = that.min;
-	max = that.max;
-}

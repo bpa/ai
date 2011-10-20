@@ -31,7 +31,8 @@ public:
 	Player player;
 	GList *parents;
 	GList *children;
-	int value, min, max, refcount;
+	int value, min, max;
+	int refcount, processed;
 
 	Board(Player);
 	Board(Player, const char *);
@@ -41,10 +42,6 @@ public:
 	void init();
 	void add_jump_moves();
 	void add_normal_moves();
-	bool operator< (const Board &) const;
-	void operator= (const Board &);
 };
-
-ostream &operator<<(ostream &, const Board &);
 
 #endif

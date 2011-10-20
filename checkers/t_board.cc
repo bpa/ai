@@ -3,6 +3,7 @@
 #include <sstream>
 #include <gtest/gtest.h>
 #include <math.h>
+#include "debug.h"
 #include "board.h"
 
 #define pos(x) (__u32)pow(2, x)

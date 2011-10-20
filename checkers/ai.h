@@ -3,7 +3,6 @@
 
 #include <map>
 #include <queue>
-#include <vector>
 #include <glib.h>
 #include "board.h"
 
@@ -35,7 +34,7 @@ public:
 	Board *current;
 	int states_in_memory;
 	GTree *states;
-	GQueue *backlog;
+	GSequence *backlog;
 	GQueue *garbage;
 };
 

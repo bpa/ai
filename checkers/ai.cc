@@ -1,7 +1,9 @@
 #include <iostream>
 #include <algorithm>
 #include <stdlib.h>
+#include <unistd.h>
 #include "ai.h"
+#include "debug.h"
 
 #define INCREF(board) board->refcount++;
 
@@ -30,14 +32,22 @@ gint key_cmp(gconstpointer a, gconstpointer b) {
 	return 0;
 }
 
+#define B(r) ((Board*)r)
+gint priority_cmp(gconstpointer a, gconstpointer b, gpointer data) {
+	int a_weight = B(a)->player == RED_PLAYER ? B(a)->max : -B(a)->min;
+	int b_weight = B(b)->player == RED_PLAYER ? B(b)->max : -B(b)->min;
+	if (a_weight != b_weight) return a_weight > b_weight ? -1 : 1;
+	return a < b ? -1 : 1;
+}
+
 AI::AI(Player me, float time_limit) {
 	states = g_tree_new(key_cmp);
-	backlog = g_queue_new();
+	backlog = g_sequence_new(NULL);
 	garbage = g_queue_new();
 
 	current = new Board(me);
 	g_tree_insert(states, current, current);
-	g_queue_push_tail(backlog, current);
+	g_sequence_insert_sorted(backlog, current, priority_cmp, NULL);
 	INCREF(current);
 	states_in_memory = 1;
 }
@@ -51,6 +61,9 @@ Move *AI::choose_next_move() {
 	gc();
 	search();
 	cerr << states_in_memory << " states in memory" << endl;
+	if (!current->processed) {
+		cerr << "we are slacking" << endl;
+	}
 	if (current->children == NULL) {
 		cerr << "no moves" << endl;
 		return NULL;
@@ -69,8 +82,7 @@ void AI::execute_move(Move *m) {
 		cerr << "move wasn't found" << endl;
 		g_tree_insert(states, next, next);
 		states_in_memory++;
-		g_queue_push_head(backlog, next);
-		cerr << next << endl;
+		g_sequence_insert_sorted(backlog, next, priority_cmp, NULL);
 		cache = next;
 	}
 	else {
@@ -79,22 +91,22 @@ void AI::execute_move(Move *m) {
 	INCREF(cache);
 	DECREF(current);
 	current = cache;
+	cerr << *current << endl;
 }
 
-void update_parents(Board *b, int depth) {
-cerr << "updating " << depth << endl;
+void update_parents(Board *b) {
 	for (GList *it=b->parents; it != NULL; it=g_list_next(it)) {
 		Board *parent = (Board*)it->data;
 		if (b->player == RED_PLAYER) {
 			if (b->max < parent->min) {
 				parent->min = b->max;
-				update_parents(parent, depth+1);
+				update_parents(parent);
 			}
 		}
 		else {
 			if (b->min > parent->max) {
 				parent->max = b->min;
-				update_parents(parent, depth+1);
+				update_parents(parent);
 			}
 		}
 	}
@@ -102,33 +114,37 @@ cerr << "updating " << depth << endl;
 
 void AI::search() {
 	int nodes = 0;
-	cerr << "backlog: " << g_queue_get_length(backlog) << endl;
+	cerr << "backlog: " << g_sequence_get_length(backlog) << endl;
 	for (int i=0; i<1000; i++) {
-		Board *b = (Board*)g_queue_pop_head(backlog);
-		if (b == NULL)
+POP:
+		GSequenceIter *begin = g_sequence_get_begin_iter(backlog);
+		Board *b = (Board*)g_sequence_get(begin);
+		g_sequence_remove(begin);
+		if (b == NULL) {
+			cerr << "NULL?" << endl;
 			continue;
-		if (b->refcount < 1)
-			continue;
+		}
+		if (b->refcount < 1) {
+			delete b;
+			goto POP;
+		}
 		b->generate_moves();
-		for (GList *it=b->children; it != NULL; it=g_list_next(it)) {
+		for (GList *it=b->children; it; it=it->next) {
 			Child *child = (Child*)it->data;
 			Board *cache = (Board*)g_tree_lookup(states, child->board);
 			if (cache == NULL) {
 				g_tree_insert(states, child->board, child->board);
 				states_in_memory++;
-				g_queue_push_tail(backlog, child->board);
+				g_sequence_insert_sorted(backlog, child->board, priority_cmp, NULL);
 				cache = child->board;
 			}
 			else {
 				delete child->board;
 				child->board = cache;
 			}
-		for (GList *it2=cache->parents; it2 != NULL; it2=g_list_next(it)) {
-			cerr << *((Board*)it2) << endl;
-		}
 			cache->parents = g_list_prepend(cache->parents, b);
 
-			update_parents(child->board, 0);
+			update_parents(child->board);
 			INCREF(cache);
 		}
 		nodes++;
@@ -142,15 +158,17 @@ void AI::gc() {
 	while ((b = (Board*)g_queue_pop_head(garbage))) {
 		g_tree_remove(states, b);
 		states_in_memory--;
-		while (b->children != NULL) {
-			Child *child = (Child*)b->children->data;
-			b->children = g_list_delete_link(b->children, b->children);
-			DECREF(child->board);
-			child->board->parents = g_list_remove(child->board->parents, b);
-			free(child);
+		if (b->processed) {
+			while (b->children != NULL) {
+				Child *child = (Child*)b->children->data;
+				b->children = g_list_delete_link(b->children, b->children);
+				DECREF(child->board);
+				child->board->parents = g_list_remove(child->board->parents, b);
+				free(child);
+			}
+			delete b;
+			collected++;
 		}
-		delete b;
-		collected++;
 	}
 	cerr << "Deleted " << collected << " states" << endl;
 }
