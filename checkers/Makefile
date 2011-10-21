@@ -5,13 +5,13 @@ GTEST_OBJS := gtest-all.o gtest_main.o
 
 GTEST = $(HOME)/build/gtest
 TFLAGS = -I$(GTEST)/include
-CFLAGS = -Wall -Wextra -g `pkg-config --cflags glib-2.0`
+CFLAGS = -Wall -Wextra -g -pg `pkg-config --cflags glib-2.0`
 
 
 all: bruce test
 
 bruce: $(OBJS) main.o
-	$(CXX) -o bruce $(OBJS) main.o `pkg-config --libs glib-2.0`
+	$(CXX) -o bruce $(OBJS) main.o -pg `pkg-config --libs glib-2.0`
 
 .PHONY: test
 test: gtest

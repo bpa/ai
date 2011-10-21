@@ -14,6 +14,18 @@
 		g_queue_push_tail(garbage, board); \
 	}
 
+#define DEBUG \
+{ \
+	g_timer_stop(timer); \
+	cerr.precision(2); \
+	double e = g_timer_elapsed(timer, &trashpointer); \
+	if (e > .0001) \
+		cerr << "ai:" << __LINE__ << " " << e << endl; \
+	g_timer_start(timer); \
+}
+gulong trashpointer;
+GTimer *timer;
+
 gint best_board(gconstpointer a, gconstpointer b) {
 	if (((Child*)a)->board->player == RED_PLAYER)
 		return ((Child*)a)->board->max - ((Child*)b)->board->max;
@@ -59,6 +71,8 @@ AI::AI(Player me, float time_limit) {
 	g_tree_insert(states, current, current);
 	g_tree_insert(steps[24], current, current);
 	pieces = 24;
+	timer = g_timer_new();
+	g_timer_start(timer);
 }
 
 void AI::move(const char *str) {
@@ -68,8 +82,11 @@ void AI::move(const char *str) {
 }
 
 Move *AI::choose_next_move() {
+DEBUG
 	gc();
+DEBUG
 	search();
+DEBUG
 	cerr << g_tree_nnodes(states) << " states in memory" << endl;
 	if (!current->processed) {
 		cerr << "we are slacking" << endl;
@@ -103,7 +120,7 @@ void AI::execute_move(Move *m) {
 	INCREF(cache);
 	DECREF(current);
 	current = cache;
-	//cerr << *current << endl;
+	cerr << *current << endl;
 }
 
 void update_parents(Board *b) {
@@ -148,19 +165,25 @@ gboolean delete_node(gpointer key, gpointer node, gpointer ai) {
 
 void AI::search() {
 	int nodes = 0;
+DEBUG
 	cerr << "backlog: " << g_sequence_get_length(backlog) << endl;
+DEBUG
 	for (int i=0; i<1000; i++) {
 POP:
+DEBUG
 		GSequenceIter *begin = g_sequence_get_begin_iter(backlog);
 		if (g_sequence_iter_is_end(begin))
 			break;
 		Board *b = (Board*)g_sequence_get(begin);
+DEBUG
 		g_sequence_remove(begin);
+DEBUG
 		if (b == NULL) {
 			cerr << "NULL?" << endl;
 			continue;
 		}
 		if (b->refcount < 1) {
+DEBUG
 			if (b->processed) {
 				delete_node(b, b, this);
 			}
@@ -169,6 +192,7 @@ POP:
 				g_tree_remove(steps[b->pieces], b);
 				delete b;
 			}
+DEBUG
 			goto POP;
 		}
 		if (b->processed) {
@@ -181,14 +205,15 @@ POP:
 }
 
 void AI::process_node(Board *b) {
-cerr << "start" << endl;
-cerr << *b << endl;
+DEBUG
 	b->generate_moves();
-cerr << "here" << endl;
+DEBUG
 	for (GList *it=b->children; it; it=it->next) {
 		Child *child = (Child*)it->data;
 		child->pieces = child->board->pieces;
+DEBUG
 		Board *cache = (Board*)g_tree_lookup(states, child->board);
+DEBUG
 		if (cache == NULL) {
 			g_tree_insert(states, child->board, child->board);
 			g_tree_insert(steps[child->board->pieces], child->board, child->board);
@@ -205,7 +230,7 @@ cerr << "here" << endl;
 		update_parents(cache);
 		INCREF(cache);
 	}
-cerr << "end" << endl;
+//cerr << "end" << endl;
 }
 
 void AI::gc() {
