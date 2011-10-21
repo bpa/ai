@@ -34,5 +34,7 @@ bool operator< (const Move &a, const Move &b) {
 }
 
 ostream& operator<<(ostream &out, const Move &m) {
-  return out << m.str();
+	char buf[24];
+	move_to_string(&m, buf);
+  return out << buf;
 }

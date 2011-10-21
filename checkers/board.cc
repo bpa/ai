@@ -126,10 +126,12 @@ Board::Board(Board *parent, Move *move) {
 }
 
 void Board::init() {
+	pieces = bits(red) + bits(black);
 	value = bits(red) + bits(red & kings) - bits(black) - bits(black & kings);
 	min = max = value;
 	refcount = 0;
 	processed = 0;
+	depth = 0;
 	parents = NULL;
 	children = NULL;
 }
@@ -155,7 +157,7 @@ Board::~Board() {
 				if (!more_jumps) { \
 					Child *c = new Child; \
 					memcpy(&c->move, stack, sizeof(Move)); \
-					c->move.addTile(loc[f(ind)]); \
+					move_add_tile(&c->move, loc[f(ind)]); \
 					c->board = new Board(board, &c->move); \
 					board->children = g_list_prepend(board->children, c); \
 				} \
@@ -166,7 +168,7 @@ Board::~Board() {
 bool jumps(Board *board, Move *stack, int ind, __u32 piece, Player p, __u32 red, __u32 black, bool king) {
 	bool added_move = false;
 	__u32 empty = ~(red | black);
-	stack->addTile(loc[ind]);
+	move_add_tile(stack, loc[ind]);
 
 	if (p == BLACK_PLAYER || king) {
 		try_jump((BOTTOM_ROW | RIGHT_COL), shift_ul, jump_ind_ul);// ↖
@@ -186,6 +188,7 @@ void Board::add_jump_moves() {
 	__u32 t = 1;
 	__u32 pieces = player == RED_PLAYER ? red : black;
 	Move stack;
+	stack.moves = 0;
 	for (int i=0; pieces; i++) {
 		if (t & pieces) {
 			jumps(this, &stack, i, t, player, red, black, kings&t);
@@ -204,9 +207,9 @@ void Board::add_jump_moves() {
 			for (int i=0; valid; i++) { \
 				if (t & valid) { \
 					Child *c = (Child*)malloc(sizeof(Child)); \
-					c->move = Move(); \
-					c->move.addTile(loc[f(i)]); \
-					c->move.addTile(loc[i]); \
+					c->move.moves = 0; \
+					move_add_tile(&c->move, loc[f(i)]); \
+					move_add_tile(&c->move, loc[i]); \
 					c->board = new Board(this, &c->move); \
 					children = g_list_prepend(children, c); \
 					valid ^= t; \

@@ -11,6 +11,7 @@ class Board;
 typedef struct st_child {
 	Move move;
 	Board *board;
+	int pieces;
 } Child;
 
 /*---------------
@@ -33,6 +34,7 @@ public:
 	GList *children;
 	int value, min, max;
 	int refcount, processed;
+	int depth, pieces;
 
 	Board(Player);
 	Board(Player, const char *);
