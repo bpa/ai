@@ -126,9 +126,22 @@ Board::Board(Board *parent, Move *move) {
 }
 
 void Board::init() {
+	int red_p = bits(red) * 10;
+	int black_p = bits(black) * 10;
 	pieces = bits(red) + bits(black);
-	value = bits(red) + bits(red & kings) - bits(black) - bits(black & kings);
-	min = max = value;
+	if (red_p == 0)
+		value = -10000;
+	else if (black_p == 0)
+		value = 10000;
+	else {
+		value = red_p - black_p;
+		if (red_p > black_p)
+			value = value * red_p / black_p;
+		else
+			value = value * black_p / red_p;
+		value += (bits(red & kings) - bits(black & kings)) * 10;
+	}
+	best = value;
 	refcount = 0;
 	processed = 0;
 	depth = 0;

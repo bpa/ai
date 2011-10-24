@@ -1,8 +1,10 @@
 #include <iostream>
+#include <fstream>
 #include <algorithm>
 #include <stdlib.h>
 #include <unistd.h>
 #include <strings.h>
+#include <signal.h>
 #include "ai.h"
 #include "debug.h"
 
@@ -23,14 +25,34 @@
 		cerr << "ai:" << __LINE__ << " " << e << endl; \
 	g_timer_start(timer); \
 }
+
+volatile sig_atomic_t have_time_left = 0;
+
+void handle_timeout(int info) {
+	have_time_left = 0;
+	cerr << "hi" << endl;
+}
+
+void set_signal_handlers() {
+	struct sigaction new_action;
+
+	new_action.sa_handler = handle_timeout;
+	sigemptyset (&new_action.sa_mask);
+	new_action.sa_flags = 0;
+
+	sigaction (SIGINT, &new_action, NULL);
+	sigaction (SIGTERM, &new_action, NULL);
+	sigaction (SIGALRM, &new_action, NULL);
+}
+
 gulong trashpointer;
 GTimer *timer;
 
 gint best_board(gconstpointer a, gconstpointer b) {
 	if (((Child*)a)->board->player == RED_PLAYER)
-		return ((Child*)a)->board->max - ((Child*)b)->board->max;
+		return ((Child*)b)->board->best - ((Child*)a)->board->best;
 	else
-		return ((Child*)b)->board->min - ((Child*)a)->board->min;
+		return ((Child*)b)->board->best - ((Child*)a)->board->best;
 }
 
 #define CMP(field) \
@@ -47,9 +69,9 @@ gint key_cmp(gconstpointer a, gconstpointer b) {
 
 #define B(r) ((Board*)r)
 gint priority_cmp(gconstpointer a, gconstpointer b, gpointer data) {
-	int depth_diff = B(a)->depth - B(b)->depth;
-	if (depth_diff > 4 || depth_diff < -4)
-		return depth_diff;
+//	int depth_diff = B(a)->depth - B(b)->depth;
+//	if (depth_diff > 4 || depth_diff < -4)
+//		return depth_diff;
 
 	int a_weight = B(a)->player == RED_PLAYER ? B(a)->value : -B(a)->value;
 	int b_weight = B(b)->player == RED_PLAYER ? B(b)->value : -B(b)->value;
@@ -58,7 +80,6 @@ gint priority_cmp(gconstpointer a, gconstpointer b, gpointer data) {
 }
 
 AI::AI(Player me, float time_limit) {
-	bzero(steps, 24 * sizeof(GList *));
 	states = g_tree_new(key_cmp);
 	backlog = g_sequence_new(NULL);
 	garbage = g_queue_new();
@@ -73,6 +94,7 @@ AI::AI(Player me, float time_limit) {
 	pieces = 24;
 	timer = g_timer_new();
 	g_timer_start(timer);
+	set_signal_handlers();
 }
 
 void AI::move(const char *str) {
@@ -81,12 +103,20 @@ void AI::move(const char *str) {
 	free(m);
 }
 
+void print_it(gpointer child, gpointer trash) {
+	Child *c = (Child*)child;
+	cerr << "Child: " << c->move << " best " << c->board->best << endl;
+}
+
 Move *AI::choose_next_move() {
-DEBUG
+	have_time_left = 1;
+	//set_alarm();
 	gc();
-DEBUG
 	search();
-DEBUG
+	if (!have_time_left) {
+		cerr << "Got killed" << endl;
+		return NULL;
+	}
 	cerr << g_tree_nnodes(states) << " states in memory" << endl;
 	if (!current->processed) {
 		cerr << "we are slacking" << endl;
@@ -97,6 +127,7 @@ DEBUG
 		return NULL;
 	}
 	current->children = g_list_sort(current->children, best_board);
+	g_list_foreach(current->children, print_it, NULL);
 	Move *m = &((Child*)current->children->data)->move;
 	execute_move(m);
 	return m;
@@ -123,18 +154,18 @@ void AI::execute_move(Move *m) {
 	cerr << *current << endl;
 }
 
-void update_parents(Board *b) {
-	for (GList *it=b->parents; it != NULL; it=g_list_next(it)) {
+void update_parents(Board *child) {
+	for (GList *it=child->parents; it != NULL; it=g_list_next(it)) {
 		Board *parent = (Board*)it->data;
-		if (b->player == RED_PLAYER) {
-			if (b->max < parent->min) {
-				parent->min = b->max;
+		if (parent->player == RED_PLAYER) {
+			if (parent->best < child->best) {
+				parent->best = child->best;
 				update_parents(parent);
 			}
 		}
 		else {
-			if (b->min > parent->max) {
-				parent->max = b->min;
+			if (parent->best > child->best) {
+				parent->best = child->best;
 				update_parents(parent);
 			}
 		}
@@ -165,34 +196,29 @@ gboolean delete_node(gpointer key, gpointer node, gpointer ai) {
 
 void AI::search() {
 	int nodes = 0;
-DEBUG
+	cerr << this << endl;
 	cerr << "backlog: " << g_sequence_get_length(backlog) << endl;
-DEBUG
-	for (int i=0; i<1000; i++) {
+	for (int i=0; i<10000; i++) {
 POP:
-DEBUG
 		GSequenceIter *begin = g_sequence_get_begin_iter(backlog);
 		if (g_sequence_iter_is_end(begin))
 			break;
 		Board *b = (Board*)g_sequence_get(begin);
-DEBUG
 		g_sequence_remove(begin);
-DEBUG
 		if (b == NULL) {
 			cerr << "NULL?" << endl;
 			continue;
 		}
 		if (b->refcount < 1) {
-DEBUG
 			if (b->processed) {
 				delete_node(b, b, this);
 			}
 			else {
-				g_tree_remove(states, b);
-				g_tree_remove(steps[b->pieces], b);
-				delete b;
+				if(g_tree_remove(states, b)) {
+					g_tree_remove(steps[b->pieces], b);
+					delete b;
+				}
 			}
-DEBUG
 			goto POP;
 		}
 		if (b->processed) {
@@ -205,15 +231,11 @@ DEBUG
 }
 
 void AI::process_node(Board *b) {
-DEBUG
 	b->generate_moves();
-DEBUG
 	for (GList *it=b->children; it; it=it->next) {
 		Child *child = (Child*)it->data;
 		child->pieces = child->board->pieces;
-DEBUG
 		Board *cache = (Board*)g_tree_lookup(states, child->board);
-DEBUG
 		if (cache == NULL) {
 			g_tree_insert(states, child->board, child->board);
 			g_tree_insert(steps[child->board->pieces], child->board, child->board);
@@ -230,7 +252,6 @@ DEBUG
 		update_parents(cache);
 		INCREF(cache);
 	}
-//cerr << "end" << endl;
 }
 
 void AI::gc() {
@@ -244,6 +265,7 @@ void AI::gc() {
 
 void AI::gc_step() {
 	g_tree_foreach(steps[pieces], delete_node, this);
+	cerr << "Deleted " << g_tree_nnodes(steps[pieces]) << " from level " << pieces << endl;
 	g_tree_destroy(steps[pieces]);
 	steps[pieces] = g_tree_new(key_cmp);
 }

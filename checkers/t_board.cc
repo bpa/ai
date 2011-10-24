@@ -406,6 +406,7 @@ TEST(board, real) {
 ". . . . "
 " . . . b"
 ". R . b ");
+	ASSERT_EQ(-30, b.value);
 
 	GList *moves = children(&b, RED_PLAYER);
 	ASSERT_EQ((uint)6, g_list_length(moves));

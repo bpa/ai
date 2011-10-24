@@ -32,7 +32,7 @@ public:
 	Player player;
 	GList *parents;
 	GList *children;
-	int value, min, max;
+	int value, best;
 	int refcount, processed;
 	int depth, pieces;
 
