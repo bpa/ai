@@ -17,6 +17,8 @@
 		g_queue_push_tail(garbage, board); \
 	}
 
+#define C(it) ((Child*)it->data)
+
 volatile sig_atomic_t have_time_left = 0;
 
 void handle_timeout(int info) {
@@ -48,9 +50,9 @@ void AI::init_timer(float limit) {
 
 gint best_board(gconstpointer a, gconstpointer b) {
 	if (((Child*)a)->board->player == RED_PLAYER)
-		return ((Child*)b)->board->best - ((Child*)a)->board->best;
-	else
 		return ((Child*)a)->board->best - ((Child*)b)->board->best;
+	else
+		return ((Child*)b)->board->best - ((Child*)a)->board->best;
 }
 
 AI::AI(Player me, float time_limit) {
@@ -114,29 +116,28 @@ void AI::execute_move(Move *m) {
 	cerr << *current << endl;
 }
 
-void update_parents(Board *child) {
-	for (GList *it=child->parents; it; it=it->next) {
-		Board *parent = (Board*)it->data;
-		int best;
-		if (parent->player == RED_PLAYER) {
-			best = -GAME_OVER;
-			for (GList *c=parent->children; c; c=c->next) {
-				if (best < child->best) {
-					best = child->best;
-				}
+void update_minimax(Board *board) {
+	int best;
+	if (board->player == RED_PLAYER) {
+		best = -GAME_OVER;
+		for (GList *child=board->children; child; child=child->next) {
+			if (best < C(child)->board->best) {
+				best = C(child)->board->best;
 			}
 		}
-		else {
-			best = GAME_OVER;
-			for (GList *c=parent->children; c; c=c->next) {
-				if (best > child->best) {
-					best = child->best;
-				}
+	}
+	else {
+		best = GAME_OVER;
+		for (GList *child=board->children; child; child=child->next) {
+			if (best > C(child)->board->best) {
+				best = C(child)->board->best;
 			}
 		}
-		if (parent->best != best) {
-			parent->best = best;
-			update_parents(parent);
+	}
+	if (board->best != best) {
+		board->best = best;
+		for (GList *it=board->parents; it; it=it->next) {
+			update_minimax((Board*)it->data);
 		}
 	}
 }
@@ -162,7 +163,6 @@ void delete_node(gpointer key, gpointer node, gpointer ai) {
 	}
 }
 
-#define C(it) ((Child*)it->data)
 void AI::search() {
 	int nodes = 0;
 	int depth = 0;
@@ -209,9 +209,9 @@ void AI::process_node(Board *b) {
 		}
 		cache->parents = g_list_prepend(cache->parents, b);
 
-		update_parents(cache);
 		INCREF(cache);
 	}
+	update_minimax(b);
 }
 
 void AI::gc() {
