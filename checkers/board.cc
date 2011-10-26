@@ -125,21 +125,33 @@ Board::Board(Board *parent, Move *move) {
 	init();
 }
 
+#define COUNT_BITS( board, var ) \
+{ \
+	int tmp = board; \
+	for (var = 0; tmp; var++) tmp &= tmp - 1; \
+}
+
 void Board::init() {
-	int red_p = bits(red) * 10;
-	int black_p = bits(black) * 10;
-	pieces = bits(red) + bits(black);
+	int red_p, black_p;
+	COUNT_BITS(red, red_p);
+	COUNT_BITS(black, black_p);
+	pieces = red_p + black_p;
+	red_p *= 10;
+	black_p *= 10;
 	if (red_p == 0)
-		value = -10000;
+		value = -GAME_OVER;
 	else if (black_p == 0)
-		value = 10000;
+		value = GAME_OVER;
 	else {
+		int red_kings, black_kings;
+		COUNT_BITS( red  & kings, red_kings);
+		COUNT_BITS(black & kings, black_kings);
 		value = red_p - black_p;
 		if (red_p > black_p)
 			value = value * red_p / black_p;
 		else
 			value = value * black_p / red_p;
-		value += (bits(red & kings) - bits(black & kings)) * 10;
+		value += (red_kings - black_kings) * 4;
 	}
 	best = value;
 	refcount = 0;
@@ -254,5 +266,18 @@ void Board::generate_moves() {
 	if (children == NULL)
 		add_normal_moves();
 	processed = 1;
+	if (children == NULL)
+		value = player == RED_PLAYER ? -GAME_OVER : GAME_OVER;
 }
 
+#define B(p) ((Board*)p)
+guint board_hash(gconstpointer board) {
+	return B(board)->red | B(board)->black;
+}
+
+gboolean board_equal(gconstpointer a, gconstpointer b) {
+	return B(a)->red    == B(b)->red
+		&& B(a)->black  == B(b)->black
+		&& B(a)->kings  == B(b)->kings
+		&& B(a)->player == B(b)->player;
+}

@@ -17,13 +17,15 @@ public:
 	void gc();
 	void gc_step();
 	void gc_garbage();
+	void init_timer(float limit);
 
 	Board *current;
 	int pieces;
-	GTree *states;
-	GTree *steps[25];
-	GSequence *backlog;
+	GHashTable *states;
+	GHashTable *steps[25];
 	GQueue *garbage;
+	timer_t timerid;
+	struct itimerspec turn_time_limit;
 };
 
 #endif

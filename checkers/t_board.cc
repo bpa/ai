@@ -418,6 +418,29 @@ TEST(board, real) {
 	ASSERT_MOVE("30-26", moves, 5);
 }
 
+TEST(board, game_over) {
+	Board b(RED_PLAYER,
+" . . r .");
+	ASSERT_EQ(GAME_OVER, b.value);
+
+	b = Board(RED_PLAYER,
+" . . b .");
+	ASSERT_EQ(-GAME_OVER, b.value);
+
+	b = Board(BLACK_PLAYER,
+" r . . ."
+"b . . . ");
+	b.generate_moves();
+	ASSERT_EQ(GAME_OVER, b.value);
+
+	b = Board(RED_PLAYER,
+" . . . r"
+". . . b "
+" . . b .");
+	b.generate_moves();
+	ASSERT_EQ(-GAME_OVER, b.value);
+}
+
 TEST(board, lt) {
 	Board a(RED_PLAYER, " . . . r");
 	Board b(RED_PLAYER, " . . . r");

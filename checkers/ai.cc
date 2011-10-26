@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <strings.h>
 #include <signal.h>
+#include <time.h>
 #include "ai.h"
 #include "debug.h"
 
@@ -16,24 +17,24 @@
 		g_queue_push_tail(garbage, board); \
 	}
 
-#define DEBUG \
-{ \
-	g_timer_stop(timer); \
-	cerr.precision(2); \
-	double e = g_timer_elapsed(timer, &trashpointer); \
-	if (e > .0001) \
-		cerr << "ai:" << __LINE__ << " " << e << endl; \
-	g_timer_start(timer); \
-}
-
 volatile sig_atomic_t have_time_left = 0;
 
 void handle_timeout(int info) {
 	have_time_left = 0;
-	cerr << "hi" << endl;
 }
 
-void set_signal_handlers() {
+void AI::init_timer(float limit) {
+	limit -= .0001;
+	int seconds = limit;
+	int nanos = (limit - seconds) * 1000000000;
+	turn_time_limit.it_value.tv_sec = seconds;
+	turn_time_limit.it_value.tv_nsec = nanos;
+
+	turn_time_limit.it_interval.tv_sec = 0;
+	turn_time_limit.it_interval.tv_nsec = 0;
+
+	timer_create (CLOCK_REALTIME, NULL, &timerid);
+
 	struct sigaction new_action;
 
 	new_action.sa_handler = handle_timeout;
@@ -45,56 +46,25 @@ void set_signal_handlers() {
 	sigaction (SIGALRM, &new_action, NULL);
 }
 
-gulong trashpointer;
-GTimer *timer;
-
 gint best_board(gconstpointer a, gconstpointer b) {
 	if (((Child*)a)->board->player == RED_PLAYER)
 		return ((Child*)b)->board->best - ((Child*)a)->board->best;
 	else
-		return ((Child*)b)->board->best - ((Child*)a)->board->best;
-}
-
-#define CMP(field) \
-if (((Board*)a)->field != ((Board *)b)->field) \
-	return ((Board*)a)->field < ((Board*)b)->field ? -1 : 1;
-
-gint key_cmp(gconstpointer a, gconstpointer b) {
-	CMP(red);
-	CMP(black);
-	CMP(kings);
-	CMP(player);
-	return 0;
-}
-
-#define B(r) ((Board*)r)
-gint priority_cmp(gconstpointer a, gconstpointer b, gpointer data) {
-//	int depth_diff = B(a)->depth - B(b)->depth;
-//	if (depth_diff > 4 || depth_diff < -4)
-//		return depth_diff;
-
-	int a_weight = B(a)->player == RED_PLAYER ? B(a)->value : -B(a)->value;
-	int b_weight = B(b)->player == RED_PLAYER ? B(b)->value : -B(b)->value;
-	if (a_weight != b_weight) return a_weight - b_weight;
-	return a < b ? -1 : 1;
+		return ((Child*)a)->board->best - ((Child*)b)->board->best;
 }
 
 AI::AI(Player me, float time_limit) {
-	states = g_tree_new(key_cmp);
-	backlog = g_sequence_new(NULL);
+	states = g_hash_table_new(board_hash, board_equal);
 	garbage = g_queue_new();
 
 	current = new Board(me);
-	g_sequence_insert_sorted(backlog, current, priority_cmp, NULL);
 	INCREF(current);
 	for (pieces = 0; pieces < 25; pieces++) 
-		steps[pieces] = g_tree_new(key_cmp);
-	g_tree_insert(states, current, current);
-	g_tree_insert(steps[24], current, current);
+		steps[pieces] = g_hash_table_new(board_hash, board_equal);
 	pieces = 24;
-	timer = g_timer_new();
-	g_timer_start(timer);
-	set_signal_handlers();
+	g_hash_table_insert(states, current, current);
+	g_hash_table_insert(steps[24], current, current);
+	init_timer(time_limit);
 }
 
 void AI::move(const char *str) {
@@ -109,19 +79,11 @@ void print_it(gpointer child, gpointer trash) {
 }
 
 Move *AI::choose_next_move() {
+	timer_settime (timerid, 0, &turn_time_limit, NULL);
 	have_time_left = 1;
-	//set_alarm();
 	gc();
 	search();
-	if (!have_time_left) {
-		cerr << "Got killed" << endl;
-		return NULL;
-	}
-	cerr << g_tree_nnodes(states) << " states in memory" << endl;
-	if (!current->processed) {
-		cerr << "we are slacking" << endl;
-		process_node(current);
-	}
+	cerr << g_hash_table_size(states) << " states in memory" << endl;
 	if (current->children == NULL) {
 		cerr << "no moves" << endl;
 		return NULL;
@@ -135,14 +97,12 @@ Move *AI::choose_next_move() {
 
 void AI::execute_move(Move *m) {
 	Board *next = new Board(current, m);
-	Board *cache = (Board*)g_tree_lookup(states, next);
+	Board *cache = (Board*)g_hash_table_lookup(states, next);
 	
 	if (cache == NULL) {
 		cerr << "move wasn't found" << endl;
-		g_tree_insert(states, next, next);
-		g_tree_insert(steps[next->pieces], next, next);
-		next->depth = current->depth + 1;
-		g_sequence_insert_sorted(backlog, next, priority_cmp, NULL);
+		g_hash_table_insert(states, next, next);
+		g_hash_table_insert(steps[next->pieces], next, next);
 		cache = next;
 	}
 	else {
@@ -155,28 +115,37 @@ void AI::execute_move(Move *m) {
 }
 
 void update_parents(Board *child) {
-	for (GList *it=child->parents; it != NULL; it=g_list_next(it)) {
+	for (GList *it=child->parents; it; it=it->next) {
 		Board *parent = (Board*)it->data;
+		int best;
 		if (parent->player == RED_PLAYER) {
-			if (parent->best < child->best) {
-				parent->best = child->best;
-				update_parents(parent);
+			best = -GAME_OVER;
+			for (GList *c=parent->children; c; c=c->next) {
+				if (best < child->best) {
+					best = child->best;
+				}
 			}
 		}
 		else {
-			if (parent->best > child->best) {
-				parent->best = child->best;
-				update_parents(parent);
+			best = GAME_OVER;
+			for (GList *c=parent->children; c; c=c->next) {
+				if (best > child->best) {
+					best = child->best;
+				}
 			}
+		}
+		if (parent->best != best) {
+			parent->best = best;
+			update_parents(parent);
 		}
 	}
 }
 
-gboolean delete_node(gpointer key, gpointer node, gpointer ai) {
-	Board *b = B(node);
+void delete_node(gpointer key, gpointer node, gpointer ai) {
+	Board *b = (Board*)node;
 	b->refcount = 0;
 	if (b->processed) {
-		g_tree_remove(((AI*)ai)->states, b);
+		g_hash_table_remove(((AI*)ai)->states, b);
 		while (b->children != NULL) {
 			Child *child = (Child*)b->children->data;
 			b->children = g_list_delete_link(b->children, b->children);
@@ -191,43 +160,35 @@ gboolean delete_node(gpointer key, gpointer node, gpointer ai) {
 		}
 		delete b;
 	}
-	return false;
 }
 
+#define C(it) ((Child*)it->data)
 void AI::search() {
 	int nodes = 0;
-	cerr << this << endl;
-	cerr << "backlog: " << g_sequence_get_length(backlog) << endl;
-	for (int i=0; i<10000; i++) {
-POP:
-		GSequenceIter *begin = g_sequence_get_begin_iter(backlog);
-		if (g_sequence_iter_is_end(begin))
-			break;
-		Board *b = (Board*)g_sequence_get(begin);
-		g_sequence_remove(begin);
+	int depth = 0;
+	current->depth = 0;
+	GQueue *backlog = g_queue_new();
+	g_queue_push_tail(backlog, current);
+	while (have_time_left) {
+		Board *b = (Board*)g_queue_pop_head(backlog);
 		if (b == NULL) {
-			cerr << "NULL?" << endl;
-			continue;
+			break;
 		}
-		if (b->refcount < 1) {
-			if (b->processed) {
-				delete_node(b, b, this);
+		if (depth < b->depth)
+			depth = b->depth;
+		if (!b->processed)
+			process_node(b);
+		for (GList *it=b->children; it; it=it->next) {
+			if (C(it)->board->depth >= b->depth) {
+				C(it)->board->depth = b->depth + 1;
+				g_queue_push_tail(backlog, ((Child*)it->data)->board);
+				//TODO: Add alpha/beta pruning
 			}
-			else {
-				if(g_tree_remove(states, b)) {
-					g_tree_remove(steps[b->pieces], b);
-					delete b;
-				}
-			}
-			goto POP;
 		}
-		if (b->processed) {
-			goto POP;
-		}
-		process_node(b);
 		nodes++;
 	}
-	cerr << "Processed " << nodes << " nodes" << endl;
+	cerr << "Processed " << nodes << " nodes, max depth " << depth << endl;
+	g_queue_free(backlog);
 }
 
 void AI::process_node(Board *b) {
@@ -235,12 +196,11 @@ void AI::process_node(Board *b) {
 	for (GList *it=b->children; it; it=it->next) {
 		Child *child = (Child*)it->data;
 		child->pieces = child->board->pieces;
-		Board *cache = (Board*)g_tree_lookup(states, child->board);
+		Board *cache = (Board*)g_hash_table_lookup(states, child->board);
 		if (cache == NULL) {
-			g_tree_insert(states, child->board, child->board);
-			g_tree_insert(steps[child->board->pieces], child->board, child->board);
+			g_hash_table_insert(states, child->board, child->board);
+			g_hash_table_insert(steps[child->board->pieces], child->board, child->board);
 			child->board->depth = b->depth + 1;
-			g_sequence_insert_sorted(backlog, child->board, priority_cmp, NULL);
 			cache = child->board;
 		}
 		else {
@@ -264,18 +224,17 @@ void AI::gc() {
 }
 
 void AI::gc_step() {
-	g_tree_foreach(steps[pieces], delete_node, this);
-	cerr << "Deleted " << g_tree_nnodes(steps[pieces]) << " from level " << pieces << endl;
-	g_tree_destroy(steps[pieces]);
-	steps[pieces] = g_tree_new(key_cmp);
+	g_hash_table_foreach(steps[pieces], delete_node, this);
+	cerr << "Deleted " << g_hash_table_size(steps[pieces]) << " from level " << pieces << endl;
+	g_hash_table_remove_all(steps[pieces]);
 }
 
 void AI::gc_garbage() {
 	Board *b;
 	int collected = 0;
 	while ((b = (Board*)g_queue_pop_head(garbage))) {
-		g_tree_remove(states, b);
-		g_tree_remove(steps[b->pieces], b);
+		g_hash_table_remove(states, b);
+		g_hash_table_remove(steps[b->pieces], b);
 		if (b->processed) {
 			while (b->children != NULL) {
 				Child *child = (Child*)b->children->data;

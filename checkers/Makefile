@@ -5,20 +5,20 @@ GTEST_OBJS := gtest-all.o gtest_main.o
 
 GTEST = $(HOME)/build/gtest
 TFLAGS = -I$(GTEST)/include
-CFLAGS = -Wall -Wextra -g3 -pg `pkg-config --cflags glib-2.0`
+CFLAGS = -Wall -Wextra -O2 `pkg-config --cflags glib-2.0`
 
 
 all: bruce test
 
 bruce: $(OBJS) main.o
-	$(CXX) -o bruce $(OBJS) main.o -pg `pkg-config --libs glib-2.0`
+	$(CXX) -o bruce -O2 $(OBJS) main.o `pkg-config --libs glib-2.0` -lrt
 
 .PHONY: test
 test: gtest
 	./gtest
 
 gtest: $(TEST) $(GTEST_OBJS) $(OBJS)
-	$(CXX) -g3 -o gtest $(TEST) $(GTEST_OBJS) $(OBJS) -lpthread `pkg-config --libs glib-2.0`
+	$(CXX) -o gtest $(TEST) $(GTEST_OBJS) $(OBJS) -lpthread -lrt `pkg-config --libs glib-2.0`
 
 main.o: main.cc
 	$(CXX) $(CFLAGS) $(INC) -c $<

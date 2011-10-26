@@ -8,6 +8,8 @@
 
 class Board;
 
+#define GAME_OVER 10000
+
 typedef struct st_child {
 	Move move;
 	Board *board;
@@ -45,5 +47,8 @@ public:
 	void add_jump_moves();
 	void add_normal_moves();
 };
+
+guint board_hash(gconstpointer board);
+gboolean board_equal(gconstpointer a, gconstpointer b);
 
 #endif
