@@ -5,3 +5,8 @@ rolls  2 + bread    //1st item size
 squash 3 - meat     //2nd item size
 meat   5            //3rd item size
 lima_beans 1 - meat //5th item size
+--split
+success
+bread	rolls
+meat
+squash	lima_beans

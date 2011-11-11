@@ -2,22 +2,69 @@
 
 use strict;
 use warnings;
+use Data::Dumper;
 
 our $bags;
 our $size;
+our $items;
+our @bags;
+our @buckets;
 
 sub parse_file {
 	my $fh = shift;
 	($bags) = <$fh> =~ /(\d+)/;
 	($size) = <$fh> =~ /(\d+)/;
+	$items = 0;
+	while (<$fh>) {
+		last if /--split/;
+		s/\s+\/\/.*//;
+		my $item = new item($_);
+		$items++;
+		push @{$buckets[$item->{s}]}, $item;
+	}
 }
 
 sub bag_items {
+	my $out = shift;
+	while ($bags) {
+		my @bag;
+		add_items(\@bag, $size);
+		push @bags, \@bag;
+		$bags--;
+	}
+	print $out $items ? "failure\n" : "success\n";
 }
+
+sub add_items {}
 
 unless (defined caller) {
 	die "Usage: $0 \$file\n" unless @ARGV == 1;
-	open my $FILE, $ARGV[0] || die "Can't open $ARGV[0]: $!\n";
-	parse_file($FILE);
-	bag_items;
+	open my $INPUT, $ARGV[0] || die "Can't open $ARGV[0]: $!\n";
+	parse_file($INPUT);
+	open my $OUTPUT, '>&STDOUT';
+	bag_items($OUTPUT);
+}
+
+package item;
+
+sub new {
+	my ($class, $str) = @_;
+	my ($item, $size, $op, $other) = $str =~ /(\w+)\s+(\d+)(?:\s+([+\-])\s+(.*))?/;
+	my %objects;
+	map { $objects{$_} = 1 } split (/\s+/, $other) if defined $other;
+	bless { n=>$item, s=>$size, op=>$op, x=>\%objects }, $class;
+}
+
+sub is_compatable {
+	my ($a, $b) = @_;
+	return $a->bagable_with($b) && $b->bagable_with($a);
+}
+
+sub bagable_with {
+	my ($self, $b) = @_;
+	if (defined $self->{op}) {
+		return  exists($self->{x}{$b->{n}}) if $self->{op} eq '+';
+		return !exists($self->{x}{$b->{n}}) if $self->{op} eq '-';
+	}
+	return 1;
 }
