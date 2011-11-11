@@ -1,0 +1,23 @@
+#! /usr/bin/perl
+
+use strict;
+use warnings;
+
+our $bags;
+our $size;
+
+sub parse_file {
+	my $fh = shift;
+	($bags) = <$fh> =~ /(\d+)/;
+	($size) = <$fh> =~ /(\d+)/;
+}
+
+sub bag_items {
+}
+
+unless (defined caller) {
+	die "Usage: $0 \$file\n" unless @ARGV == 1;
+	open my $FILE, $ARGV[0] || die "Can't open $ARGV[0]: $!\n";
+	parse_file($FILE);
+	bag_items;
+}
