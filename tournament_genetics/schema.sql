@@ -1,9 +1,9 @@
 create table individual (
-  individual_id int primary key auto_increment,
+  individual_id integer primary key autoincrement
 );
 
 create table genes (
-  gene_id int primary key auto_increment,
+  gene_id integer primary key autoincrement,
   individual_id int not null,
   marker int not null,
   value text
