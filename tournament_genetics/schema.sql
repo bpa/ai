@@ -1,5 +1,6 @@
 create table individual (
-  individual_id integer primary key autoincrement
+  individual_id integer primary key autoincrement,
+  active tinyint
 );
 
 create table genes (
